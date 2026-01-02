@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,7 +7,8 @@ import {
   Switch,
   Alert,
   ScrollView,
-  SafeAreaView
+  SafeAreaView,
+  TextInput,
 } from 'react-native';
 import { 
   User, 
@@ -27,16 +28,60 @@ import {
   Info,
   ChevronRight,
   Check,
-  Star
+  Star,
+  Edit2,
+  Save,
+  Ruler,
+  Scale,
+  Activity,
+  Calendar,
+  Download,
+  Upload,
+  RefreshCw
 } from 'lucide-react-native';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfileScreen() {
-  const { isAuthenticated, user, logout, isLoading } = useAuth();
+  const { isAuthenticated, user, logout, updateProfile, isLoading, isSyncing } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [syncEnabled, setSyncEnabled] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedHeight, setEditedHeight] = useState('');
+  const [editedWeight, setEditedWeight] = useState('');
+  const [editedActivityLevel, setEditedActivityLevel] = useState<number>(1.55);
+
+  // Инициализация данных при загрузке
+  useEffect(() => {
+    if (user) {
+      setEditedHeight(user.height?.toString() || '');
+      setEditedWeight(user.weight?.toString() || '');
+      setEditedActivityLevel(user.activityLevel || 1.55);
+    }
+  }, [user]);
+
+  const activityLevels = [
+    { label: 'Сидячий', value: 1.2, desc: 'Мало или нет тренировок' },
+    { label: 'Легкая', value: 1.375, desc: '1-3 тренировки в неделю' },
+    { label: 'Умеренная', value: 1.55, desc: '3-5 тренировок в неделю' },
+    { label: 'Высокая', value: 1.725, desc: '6-7 тренировок в неделю' },
+    { label: 'Экстремальная', value: 1.9, desc: 'Тяжелая работа + тренировки' },
+  ];
+
+  const calculateAge = () => {
+    if (!user?.birthDate) return '—';
+    const birth = new Date(user.birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -54,6 +99,43 @@ export default function ProfileScreen() {
         },
       ]
     );
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    try {
+      const updates: any = {};
+      
+      if (editedHeight && parseFloat(editedHeight) !== user.height) {
+        updates.height = parseFloat(editedHeight);
+      }
+      if (editedWeight && parseFloat(editedWeight) !== user.weight) {
+        updates.weight = parseFloat(editedWeight);
+      }
+      if (editedActivityLevel !== user.activityLevel) {
+        updates.activityLevel = editedActivityLevel;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateProfile(updates);
+        Alert.alert('Успех', 'Данные профиля обновлены');
+        setIsEditing(false);
+      } else {
+        Alert.alert('Информация', 'Нет изменений для сохранения');
+      }
+    } catch (error) {
+      Alert.alert('Ошибка', 'Не удалось сохранить изменения');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (user) {
+      setEditedHeight(user.height?.toString() || '');
+      setEditedWeight(user.weight?.toString() || '');
+      setEditedActivityLevel(user.activityLevel || 1.55);
+    }
+    setIsEditing(false);
   };
 
   return (
@@ -96,7 +178,7 @@ export default function ProfileScreen() {
                 <View style={styles.userStats}>
                   <View style={styles.userStat}>
                     <Star size={14} color="#F59E0B" />
-                    <Text style={styles.userStatText}>Премиум</Text>
+                    <Text style={styles.userStatText}>Базовый</Text>
                   </View>
                   <View style={styles.userStat}>
                     <Check size={14} color="#10B981" />
@@ -120,6 +202,142 @@ export default function ProfileScreen() {
                 <Text style={styles.quickStatLabel}>Прогресс</Text>
               </View>
             </View>
+
+            {/* Редактирование профиля */}
+            <View style={styles.editSection}>
+              <View style={styles.editHeader}>
+                <Text style={styles.editTitle}>Данные для калькулятора</Text>
+                {isEditing ? (
+                  <View style={styles.editButtons}>
+                    <TouchableOpacity 
+                      style={[styles.editButton, styles.saveButton]}
+                      onPress={handleSaveProfile}
+                      disabled={isSyncing}
+                    >
+                      <Save size={16} color="white" />
+                      <Text style={styles.saveButtonText}>
+                        {isSyncing ? 'Сохранение...' : 'Сохранить'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.editButton, styles.cancelButton]}
+                      onPress={handleCancelEdit}
+                      disabled={isSyncing}
+                    >
+                      <Text style={styles.cancelButtonText}>Отмена</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.editButton}
+                    onPress={() => setIsEditing(true)}
+                  >
+                    <Edit2 size={16} color="#3B82F6" />
+                    <Text style={styles.editButtonText}>Редактировать</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Поля редактирования */}
+              <View style={styles.editFields}>
+                {/* Рост */}
+                <View style={styles.editField}>
+                  <View style={styles.fieldHeader}>
+                    <Ruler size={18} color="#6B7280" />
+                    <Text style={styles.fieldLabel}>Рост (см)</Text>
+                  </View>
+                  {isEditing ? (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={editedHeight}
+                      onChangeText={setEditedHeight}
+                      keyboardType="numeric"
+                      placeholder="175"
+                    />
+                  ) : (
+                    <Text style={styles.fieldValue}>
+                      {user?.height ? `${user.height} см` : 'Не указан'}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Вес */}
+                <View style={styles.editField}>
+                  <View style={styles.fieldHeader}>
+                    <Scale size={18} color="#6B7280" />
+                    <Text style={styles.fieldLabel}>Вес (кг)</Text>
+                  </View>
+                  {isEditing ? (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={editedWeight}
+                      onChangeText={setEditedWeight}
+                      keyboardType="numeric"
+                      placeholder="75"
+                    />
+                  ) : (
+                    <Text style={styles.fieldValue}>
+                      {user?.weight ? `${user.weight} кг` : 'Не указан'}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Уровень активности */}
+                <View style={styles.editField}>
+                  <View style={styles.fieldHeader}>
+                    <Activity size={18} color="#6B7280" />
+                    <Text style={styles.fieldLabel}>Активность</Text>
+                  </View>
+                  {isEditing ? (
+                    <View style={styles.activitySelector}>
+                      {activityLevels.map((level) => (
+                        <TouchableOpacity
+                          key={level.value}
+                          style={[
+                            styles.activityOption,
+                            editedActivityLevel === level.value && styles.activityOptionActive
+                          ]}
+                          onPress={() => setEditedActivityLevel(level.value)}
+                        >
+                          <Text style={[
+                            styles.activityOptionText,
+                            editedActivityLevel === level.value && styles.activityOptionTextActive
+                          ]}>
+                            {level.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.fieldValue}>
+                      {user?.activityLevel 
+                        ? activityLevels.find(l => l.value === user.activityLevel)?.label || 'Не указана'
+                        : 'Не указана'}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Возраст (только чтение) */}
+                <View style={styles.editField}>
+                  <View style={styles.fieldHeader}>
+                    <Calendar size={18} color="#6B7280" />
+                    <Text style={styles.fieldLabel}>Возраст</Text>
+                  </View>
+                  <Text style={styles.fieldValue}>{calculateAge()} лет</Text>
+                </View>
+
+                {/* Пол (только чтение) */}
+                <View style={styles.editField}>
+                  <View style={styles.fieldHeader}>
+                    <User size={18} color="#6B7280" />
+                    <Text style={styles.fieldLabel}>Пол</Text>
+                  </View>
+                  <Text style={styles.fieldValue}>
+                    {user?.gender === 'male' ? 'Мужской' : 'Женский'}
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
         ) : (
           <View style={styles.authCard}>
@@ -134,20 +352,22 @@ export default function ProfileScreen() {
             </Text>
             
             <View style={styles.authButtons}>
-              <Link href="/auth/login" asChild>
-                <TouchableOpacity style={styles.authButtonPrimary}>
-                  <LogIn size={20} color="white" />
-                  <Text style={styles.authButtonPrimaryText}>Войти</Text>
-                  <ChevronRight size={16} color="white" />
-                </TouchableOpacity>
-              </Link>
+              <TouchableOpacity 
+                style={styles.authButtonPrimary}
+                onPress={() => router.push('/auth/login')}
+              >
+                <LogIn size={20} color="white" />
+                <Text style={styles.authButtonPrimaryText}>Войти</Text>
+                <ChevronRight size={16} color="white" />
+              </TouchableOpacity>
               
-              <Link href="/auth/register" asChild>
-                <TouchableOpacity style={styles.authButtonSecondary}>
-                  <UserPlus size={20} color="#3B82F6" />
-                  <Text style={styles.authButtonSecondaryText}>Регистрация</Text>
-                </TouchableOpacity>
-              </Link>
+              <TouchableOpacity 
+                style={styles.authButtonSecondary}
+                onPress={() => router.push('/auth/register')}
+              >
+                <UserPlus size={20} color="#3B82F6" />
+                <Text style={styles.authButtonSecondaryText}>Регистрация</Text>
+              </TouchableOpacity>
             </View>
             
             <View style={styles.authFeatures}>
@@ -219,7 +439,7 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.settingText}>
                     <Text style={styles.settingLabel}>Синхронизация</Text>
-                    <Text style={styles.settingDescription}>Облачное сохранение</Text>
+                    <Text style={styles.settingDescription}>Автоматическая синхронизация</Text>
                   </View>
                 </View>
                 <Switch
@@ -246,7 +466,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Данные (только для авторизованных) */}
+        {/* Данные и безопасность (только для авторизованных) */}
         {isAuthenticated && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -256,7 +476,7 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuIcon}>
-                <Smartphone size={20} color="#6B7280" />
+                <Download size={20} color="#6B7280" />
               </View>
               <Text style={styles.menuText}>Экспорт данных</Text>
               <ChevronRight size={20} color="#9CA3AF" />
@@ -264,9 +484,17 @@ export default function ProfileScreen() {
             
             <TouchableOpacity style={styles.menuItem}>
               <View style={styles.menuIcon}>
-                <Cloud size={20} color="#6B7280" />
+                <Upload size={20} color="#6B7280" />
               </View>
-              <Text style={styles.menuText}>Резервная копия</Text>
+              <Text style={styles.menuText}>Импорт данных</Text>
+              <ChevronRight size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.menuItem}>
+              <View style={styles.menuIcon}>
+                <RefreshCw size={20} color="#6B7280" />
+              </View>
+              <Text style={styles.menuText}>Синхронизировать сейчас</Text>
               <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
@@ -304,7 +532,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Кнопка выхода/демо */}
+        {/* Кнопка выхода/входа */}
         <TouchableOpacity 
           style={[
             styles.actionButton,
@@ -313,7 +541,7 @@ export default function ProfileScreen() {
               : { backgroundColor: '#F3F4F6' }
           ]}
           onPress={isAuthenticated ? handleLogout : () => router.push('/auth/login')}
-          disabled={isLoading}
+          disabled={isLoading || isSyncing}
         >
           {isAuthenticated ? (
             <>
@@ -428,6 +656,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
+    marginBottom: 20,
   },
   quickStat: {
     flex: 1,
@@ -442,6 +671,114 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 4,
+  },
+  editSection: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+  },
+  editHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  editTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  editButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  saveButton: {
+    backgroundColor: '#10B981',
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  cancelButtonText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#3B82F6',
+  },
+  editFields: {
+    gap: 16,
+  },
+  editField: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 16,
+  },
+  fieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  fieldInput: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  fieldValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  activitySelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  activityOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  activityOptionActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
+  },
+  activityOptionText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  activityOptionTextActive: {
+    color: '#3B82F6',
+    fontWeight: '500',
   },
   authCard: {
     backgroundColor: '#F9FAFB',

@@ -11,7 +11,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
-import { UserPlus, Mail, Lock, User, Eye, EyeOff, Check, X } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { UserPlus, Mail, Lock, User, Eye, EyeOff, Check, X, Calendar, ChevronDown } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function RegisterScreen() {
@@ -19,6 +20,9 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [birthDate, setBirthDate] = useState(new Date(1990, 0, 1));
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register, isLoading } = useAuth();
@@ -33,6 +37,21 @@ export default function RegisterScreen() {
   };
 
   const allRequirementsMet = Object.values(passwordRequirements).every(Boolean);
+
+  // Расчет возраста
+  const calculateAge = (date: Date): number => {
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  const age = calculateAge(birthDate);
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -50,6 +69,16 @@ export default function RegisterScreen() {
       return;
     }
 
+    // Проверка возраста
+    if (age < 14) {
+      Alert.alert('Ошибка', 'Вам должно быть не менее 14 лет');
+      return;
+    }
+    if (age > 100) {
+      Alert.alert('Ошибка', 'Пожалуйста, проверьте дату рождения');
+      return;
+    }
+
     // Базовая валидация email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -58,10 +87,16 @@ export default function RegisterScreen() {
     }
 
     try {
-      await register(name, email, password);
+      await register({
+        name,
+        email,
+        password,
+        gender,
+        birthDate: birthDate.toISOString().split('T')[0], // YYYY-MM-DD
+      });
       Alert.alert(
         'Регистрация успешна!',
-        'Добро пожаловать в МетаБаланс! Ваш аккаунт создан.',
+        'Добро пожаловать в МетаБаланс! Теперь вы можете заполнить дополнительные данные в профиле.',
         [
           {
             text: 'Отлично!',
@@ -79,6 +114,8 @@ export default function RegisterScreen() {
     setEmail('ivan@example.com');
     setPassword('Demo123!');
     setConfirmPassword('Demo123!');
+    setGender('male');
+    setBirthDate(new Date(1990, 0, 1));
   };
 
   return (
@@ -128,6 +165,67 @@ export default function RegisterScreen() {
                 editable={!isLoading}
                 autoComplete="email"
               />
+            </View>
+
+            {/* Поле пола */}
+            <View style={styles.genderSection}>
+              <Text style={styles.genderLabel}>Пол</Text>
+              <View style={styles.genderButtons}>
+                <TouchableOpacity
+                  style={[styles.genderButton, gender === 'male' && styles.genderButtonActive]}
+                  onPress={() => setGender('male')}
+                  disabled={isLoading}
+                >
+                  <Text style={[styles.genderButtonText, gender === 'male' && styles.genderButtonTextActive]}>
+                    Мужчина
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.genderButton, gender === 'female' && styles.genderButtonActive]}
+                  onPress={() => setGender('female')}
+                  disabled={isLoading}
+                >
+                  <Text style={[styles.genderButtonText, gender === 'female' && styles.genderButtonTextActive]}>
+                    Женщина
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Поле даты рождения */}
+            <View style={styles.dateSection}>
+              <Text style={styles.dateLabel}>Дата рождения</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker(true)}
+                disabled={isLoading}
+              >
+                <Calendar size={20} color="#6B7280" />
+                <Text style={styles.dateText}>
+                  {birthDate.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </Text>
+                <ChevronDown size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+              <Text style={styles.ageText}>Возраст: {age} лет</Text>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={birthDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) {
+                      setBirthDate(selectedDate);
+                    }
+                  }}
+                  maximumDate={new Date()}
+                  minimumDate={new Date(1900, 0, 1)}
+                />
+              )}
             </View>
 
             {/* Поле пароля */}
@@ -357,6 +455,68 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#111827',
+  },
+  genderSection: {
+    marginBottom: 16,
+  },
+  genderLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  genderButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  genderButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  genderButtonActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  genderButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  genderButtonTextActive: {
+    color: 'white',
+  },
+  dateSection: {
+    marginBottom: 16,
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#111827',
+    flex: 1,
+  },
+  ageText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
   },
   requirements: {
     backgroundColor: '#F8FAFC',

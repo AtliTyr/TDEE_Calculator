@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -8,7 +8,7 @@ import {
   ScrollView,
   Alert,
   SafeAreaView,
-  StatusBar
+  Switch,
 } from 'react-native';
 import { 
   Calculator, 
@@ -19,18 +19,26 @@ import {
   Target,
   Flame,
   ChevronRight,
-  User
+  User,
+  Edit2,
+  Save,
+  Cloud,
+  UserCheck,
+  UserX
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function CalculatorScreen() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, updateProfile, isSyncing } = useAuth();
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [activityLevel, setActivityLevel] = useState<number>(1.55);
   const [goal, setGoal] = useState<'loss' | 'maintain' | 'gain'>('maintain');
+  const [useProfileData, setUseProfileData] = useState(isAuthenticated);
+  const [saveToProfile, setSaveToProfile] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   
   const activityLevels = [
     { label: 'Сидячий', value: 1.2, desc: 'Мало или нет тренировок' },
@@ -40,7 +48,37 @@ export default function CalculatorScreen() {
     { label: 'Экстремальная', value: 1.9, desc: 'Тяжелая работа + тренировки' },
   ];
 
-  const calculateTDEE = () => {
+  // Загрузка данных из профиля
+  const loadProfileData = useCallback(() => {
+    if (!user) return;
+    
+    if (user.gender) setGender(user.gender);
+    if (user.activityLevel) setActivityLevel(user.activityLevel);
+    if (user.height) setHeight(user.height.toString());
+    
+    // Расчет возраста из даты рождения
+    if (user.birthDate) {
+      const birth = new Date(user.birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      
+      setAge(age.toString());
+    }
+  }, [user]);
+
+  // Загрузка данных из профиля при изменении зависимостей
+  useEffect(() => {
+    if (isAuthenticated && user && useProfileData) {
+      loadProfileData();
+    }
+  }, [isAuthenticated, user, useProfileData, loadProfileData]);
+
+  const calculateTDEE = async () => {
     if (!weight || !height || !age) {
       Alert.alert('Ошибка', 'Пожалуйста, заполните все поля');
       return;
@@ -72,14 +110,71 @@ export default function CalculatorScreen() {
         targetCalories = Math.round(tdee);
     }
 
+    // Сохраняем данные если нужно
+    if (isAuthenticated && saveToProfile && user && updateProfile) {
+      const updates: any = {};
+      if (weightNum && weightNum !== user.weight) updates.weight = weightNum;
+      if (heightNum && heightNum !== user.height) updates.height = heightNum;
+      if (activityLevel !== user.activityLevel) updates.activityLevel = activityLevel;
+      
+      if (Object.keys(updates).length > 0) {
+        try {
+          await updateProfile(updates);
+        } catch (error) {
+          console.log('Не удалось сохранить данные:', error);
+        }
+      }
+    }
+
     Alert.alert(
       '🎯 Результаты расчёта',
       `🏋️‍♂️ **Основной обмен (BMR):** ${Math.round(bmr)} ккал\n\n` +
       `🔥 **Суточный расход (TDEE):** ${Math.round(tdee)} ккал\n\n` +
       `📊 **Целевые калории:** ${targetCalories} ккал\n\n` +
       `💡 **Рекомендация:** ${goal === 'loss' ? 'Для похудения' : goal === 'gain' ? 'Для набора массы' : 'Для поддержания веса'}`,
-      [{ text: 'Отлично!', style: 'default' }]
+      [
+        { 
+          text: 'Отлично!', 
+          style: 'default',
+          onPress: () => {
+            // Сбрасываем редактирование после расчета
+            if (isEditing) {
+              setIsEditing(false);
+              if (useProfileData && isAuthenticated) {
+                loadProfileData();
+              }
+            }
+          }
+        }
+      ]
     );
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Отмена редактирования - возвращаем данные из профиля
+      if (useProfileData && isAuthenticated) {
+        loadProfileData();
+      }
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSaveProfileData = () => {
+    const newValue = !useProfileData;
+    setUseProfileData(newValue);
+    if (newValue && isAuthenticated) {
+      // Включаем использование профиля - загружаем данные
+      loadProfileData();
+    }
+  };
+
+  // Определяем, можно ли редактировать поле
+  const isFieldEditable = (fieldName: string) => {
+    if (!isAuthenticated) return true; // Неавторизованные всегда могут редактировать
+    if (!useProfileData) return true; // Если отключено использование профиля
+    if (isEditing) return true; // Если включен режим редактирования
+    return false; // Во всех остальных случаях нельзя редактировать
   };
 
   return (
@@ -88,7 +183,7 @@ export default function CalculatorScreen() {
         style={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* Приветствие пользователя */}
+        {/* Приветствие и статус профиля */}
         <View style={styles.header}>
           <View style={styles.welcomeRow}>
             <View>
@@ -99,9 +194,13 @@ export default function CalculatorScreen() {
                 {isAuthenticated ? 'Рады снова видеть вас' : 'Начните свой путь к цели'}
               </Text>
             </View>
-            {isAuthenticated && (
+            {isAuthenticated ? (
               <View style={styles.userBadge}>
-                <User size={20} color="#3B82F6" />
+                <UserCheck size={20} color="#3B82F6" />
+              </View>
+            ) : (
+              <View style={styles.userBadge}>
+                <UserX size={20} color="#9CA3AF" />
               </View>
             )}
           </View>
@@ -113,16 +212,55 @@ export default function CalculatorScreen() {
           <Text style={styles.appSubtitle}>Калькулятор TDEE и калорий</Text>
         </View>
 
+        {/* Переключатель использования данных профиля (только для авторизованных) */}
+        {isAuthenticated && (
+          <View style={styles.profileToggle}>
+            <View style={styles.profileToggleInfo}>
+              <User size={18} color="#3B82F6" />
+              <View>
+                <Text style={styles.profileToggleTitle}>
+                  Использовать данные профиля
+                </Text>
+                <Text style={styles.profileToggleSubtitle}>
+                  {useProfileData 
+                    ? 'Данные загружены из вашего профиля' 
+                    : 'Введите данные вручную'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={useProfileData}
+              onValueChange={handleSaveProfileData}
+              trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
+            />
+          </View>
+        )}
+
         {/* Основные данные */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Scale size={22} color="#3B82F6" />
             <Text style={styles.sectionTitle}>Основные данные</Text>
+            {isAuthenticated && useProfileData && (
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={handleEditToggle}
+              >
+                {isEditing ? (
+                  <Save size={18} color="#10B981" />
+                ) : (
+                  <Edit2 size={18} color="#6B7280" />
+                )}
+                <Text style={styles.editButtonText}>
+                  {isEditing ? 'Сохранить' : 'Изменить'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           
           <View style={styles.inputGroup}>
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputLabel}>Вес (кг)</Text>
+              <Text style={styles.inputLabel}>Вес (кг) *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="65"
@@ -130,6 +268,7 @@ export default function CalculatorScreen() {
                 onChangeText={setWeight}
                 keyboardType="numeric"
                 placeholderTextColor="#9CA3AF"
+                editable={isFieldEditable('weight')}
               />
             </View>
             
@@ -142,6 +281,7 @@ export default function CalculatorScreen() {
                 onChangeText={setHeight}
                 keyboardType="numeric"
                 placeholderTextColor="#9CA3AF"
+                editable={isFieldEditable('height')}
               />
             </View>
             
@@ -154,6 +294,7 @@ export default function CalculatorScreen() {
                 onChangeText={setAge}
                 keyboardType="numeric"
                 placeholderTextColor="#9CA3AF"
+                editable={isFieldEditable('age')}
               />
             </View>
           </View>
@@ -162,9 +303,11 @@ export default function CalculatorScreen() {
             <TouchableOpacity
               style={[
                 styles.genderButton,
-                gender === 'male' && styles.genderButtonActive
+                gender === 'male' && styles.genderButtonActive,
+                (!isFieldEditable('gender')) && styles.genderButtonDisabled
               ]}
-              onPress={() => setGender('male')}
+              onPress={() => isFieldEditable('gender') && setGender('male')}
+              disabled={!isFieldEditable('gender')}
             >
               <Text style={[
                 styles.genderText,
@@ -174,9 +317,11 @@ export default function CalculatorScreen() {
             <TouchableOpacity
               style={[
                 styles.genderButton,
-                gender === 'female' && styles.genderButtonActive
+                gender === 'female' && styles.genderButtonActive,
+                (!isFieldEditable('gender')) && styles.genderButtonDisabled
               ]}
-              onPress={() => setGender('female')}
+              onPress={() => isFieldEditable('gender') && setGender('female')}
+              disabled={!isFieldEditable('gender')}
             >
               <Text style={[
                 styles.genderText,
@@ -203,9 +348,11 @@ export default function CalculatorScreen() {
                 key={level.value}
                 style={[
                   styles.activityCard,
-                  activityLevel === level.value && styles.activityCardActive
+                  activityLevel === level.value && styles.activityCardActive,
+                  (!isFieldEditable('activity')) && styles.activityCardDisabled
                 ]}
-                onPress={() => setActivityLevel(level.value)}
+                onPress={() => isFieldEditable('activity') && setActivityLevel(level.value)}
+                disabled={!isFieldEditable('activity')}
               >
                 <Text style={[
                   styles.activityCardValue,
@@ -255,42 +402,85 @@ export default function CalculatorScreen() {
           </View>
         </View>
 
+        {/* Сохранение в профиль (только для авторизованных) */}
+        {isAuthenticated && (
+          <View style={styles.saveSection}>
+            <View style={styles.saveHeader}>
+              <Cloud size={20} color={saveToProfile ? "#3B82F6" : "#9CA3AF"} />
+              <Text style={styles.saveTitle}>
+                {saveToProfile ? 'Сохранение в профиль включено' : 'Сохранение в профиль отключено'}
+              </Text>
+            </View>
+            <Text style={styles.saveDescription}>
+              {saveToProfile 
+                ? 'Данные расчета будут сохранены в вашем профиле'
+                : 'Данные расчета не будут сохранены в профиле'}
+            </Text>
+            <Switch
+              value={saveToProfile}
+              onValueChange={setSaveToProfile}
+              trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
+              style={styles.saveSwitch}
+            />
+          </View>
+        )}
+
+        {/* Информация о режимах */}
+        {isAuthenticated ? (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>ℹ️ Как это работает:</Text>
+            <Text style={styles.infoText}>
+              • <Text style={styles.infoBold}>Режим профиля</Text> - данные подставляются автоматически{'\n'}
+              • <Text style={styles.infoBold}>Режим редактирования</Text> - временно измените данные{'\n'}
+              • <Text style={styles.infoBold}>Ручной режим</Text> - отключите использование профиля{'\n'}
+              • <Text style={styles.infoBold}>Сохранение</Text> - включите для обновления профиля
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>ℹ️ Как это работает:</Text>
+            <Text style={styles.infoText}>
+              • <Text style={styles.infoBold}>Без авторизации</Text> - вводите данные вручную{'\n'}
+              • <Text style={styles.infoBold}>Расчёт для друга</Text> - просто заполните поля{'\n'}
+              • <Text style={styles.infoBold}>История расчётов</Text> - доступна после регистрации{'\n'}
+              • <Text style={styles.infoBold}>Автосохранение</Text> - доступно после входа в аккаунт
+            </Text>
+          </View>
+        )}
+
         {/* Кнопка расчета */}
         <TouchableOpacity 
           style={styles.calculateButton} 
           onPress={calculateTDEE}
+          disabled={isSyncing}
         >
           <Calculator size={24} color="white" />
-          <Text style={styles.calculateButtonText}>Рассчитать TDEE</Text>
+          <Text style={styles.calculateButtonText}>
+            {isSyncing ? 'Сохранение...' : 'Рассчитать TDEE'}
+          </Text>
           <ChevronRight size={20} color="white" />
         </TouchableOpacity>
 
-        {/* Быстрый доступ */}
-        <View style={styles.quickAccess}>
-          <Text style={styles.quickAccessTitle}>Быстрый доступ</Text>
-          <View style={styles.quickAccessRow}>
-            <TouchableOpacity style={styles.quickAccessItem}>
-              <View style={[styles.quickAccessIcon, { backgroundColor: '#EFF6FF' }]}>
-                <Calendar size={20} color="#3B82F6" />
+        {/* Призыв к регистрации для неавторизованных */}
+        {!isAuthenticated && (
+          <TouchableOpacity 
+            style={styles.registerPrompt}
+            onPress={() => {}}
+          >
+            <View style={styles.registerPromptContent}>
+              <User size={20} color="#3B82F6" />
+              <View style={styles.registerPromptText}>
+                <Text style={styles.registerPromptTitle}>
+                  Зарегистрируйтесь для большего
+                </Text>
+                <Text style={styles.registerPromptSubtitle}>
+                  Сохраняйте историю расчётов и настройте авто-заполнение
+                </Text>
               </View>
-              <Text style={styles.quickAccessLabel}>История</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.quickAccessItem}>
-              <View style={[styles.quickAccessIcon, { backgroundColor: '#F0FDF4' }]}>
-                <Target size={20} color="#10B981" />
-              </View>
-              <Text style={styles.quickAccessLabel}>Цели</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.quickAccessItem}>
-              <View style={[styles.quickAccessIcon, { backgroundColor: '#FEF3C7' }]}>
-                <Flame size={20} color="#F59E0B" />
-              </View>
-              <Text style={styles.quickAccessLabel}>Прогресс</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              <ChevronRight size={20} color="#9CA3AF" />
+            </View>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.disclaimer}>
@@ -313,7 +503,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   welcomeRow: {
     flexDirection: 'row',
@@ -335,7 +525,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -354,19 +544,61 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
+  profileToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  profileToggleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  profileToggleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  profileToggleSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
   section: {
     marginBottom: 28,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
+    flex: 1,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
   },
   inputGroup: {
     flexDirection: 'row',
@@ -408,6 +640,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
     borderColor: '#3B82F6',
   },
+  genderButtonDisabled: {
+    opacity: 0.5,
+  },
   genderText: {
     fontSize: 16,
     fontWeight: '500',
@@ -432,6 +667,9 @@ const styles = StyleSheet.create({
   activityCardActive: {
     backgroundColor: '#EFF6FF',
     borderColor: '#3B82F6',
+  },
+  activityCardDisabled: {
+    opacity: 0.5,
   },
   activityCardValue: {
     fontSize: 24,
@@ -489,6 +727,35 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
+  saveSection: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  saveHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  saveTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    flex: 1,
+  },
+  saveDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  saveSwitch: {
+    alignSelf: 'flex-start',
+  },
   calculateButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -497,7 +764,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 24,
     shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -509,35 +776,53 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  quickAccess: {
-    marginBottom: 32,
+  infoBox: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
   },
-  quickAccessTitle: {
+  infoTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  quickAccessRow: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  quickAccessItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  quickAccessIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    color: '#065F46',
     marginBottom: 8,
   },
-  quickAccessLabel: {
+  infoText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    color: '#065F46',
+    lineHeight: 20,
+  },
+  infoBold: {
+    fontWeight: '600',
+  },
+  registerPrompt: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  registerPromptContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  registerPromptText: {
+    flex: 1,
+  },
+  registerPromptTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E40AF',
+    marginBottom: 4,
+  },
+  registerPromptSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   footer: {
     paddingBottom: 32,
