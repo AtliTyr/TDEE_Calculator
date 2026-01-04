@@ -50,23 +50,27 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedHeight, setEditedHeight] = useState('');
   const [editedWeight, setEditedWeight] = useState('');
-  const [editedActivityLevel, setEditedActivityLevel] = useState<number>(1.55);
+  const [editedActivityCode, setEditedActivityCode] = useState<string | null>(null);
 
   // Инициализация данных при загрузке
   useEffect(() => {
     if (user) {
+      // console.log('User activityLevel from backend:', user.activityLevel);
+      // console.log('User data:', JSON.stringify(user, null, 2));
+      
       setEditedHeight(user.height?.toString() || '');
       setEditedWeight(user.weight?.toString() || '');
-      setEditedActivityLevel(user.activityLevel || 1.55);
+      setEditedActivityCode(user.activityLevel ?? null);
     }
   }, [user]);
 
+
   const activityLevels = [
-    { label: 'Сидячий', value: 1.2, desc: 'Мало или нет тренировок' },
-    { label: 'Легкая', value: 1.375, desc: '1-3 тренировки в неделю' },
-    { label: 'Умеренная', value: 1.55, desc: '3-5 тренировок в неделю' },
-    { label: 'Высокая', value: 1.725, desc: '6-7 тренировок в неделю' },
-    { label: 'Экстремальная', value: 1.9, desc: 'Тяжелая работа + тренировки' },
+    { code: 'sedentary', name: 'Сидячий', coef: 1.2, desc: 'Мало или нет тренировок' },
+    { code: 'light', name: 'Легкая', coef: 1.375, desc: '1-3 тренировки в неделю' },
+    { code: 'moderate', name: 'Умеренная', coef: 1.55, desc: '3-5 тренировок в неделю' },
+    { code: 'high', name: 'Высокая', coef: 1.725, desc: '6-7 тренировок в неделю' },
+    { code: 'extreme', name: 'Экстремальная', coef: 1.9, desc: 'Тяжелая работа + тренировки' },
   ];
 
   const calculateAge = () => {
@@ -106,25 +110,28 @@ export default function ProfileScreen() {
 
     try {
       const updates: any = {};
-      
-      if (editedHeight && parseFloat(editedHeight) !== user.height) {
-        updates.height = parseFloat(editedHeight);
-      }
-      if (editedWeight && parseFloat(editedWeight) !== user.weight) {
-        updates.weight = parseFloat(editedWeight);
-      }
-      if (editedActivityLevel !== user.activityLevel) {
-        updates.activityLevel = editedActivityLevel;
+
+      if (editedHeight && Number(editedHeight) !== user.height) {
+        updates.height = Number(editedHeight);
       }
 
-      if (Object.keys(updates).length > 0) {
-        await updateProfile(updates);
-        Alert.alert('Успех', 'Данные профиля обновлены');
-        setIsEditing(false);
-      } else {
-        Alert.alert('Информация', 'Нет изменений для сохранения');
+      if (editedWeight && Number(editedWeight) !== user.weight) {
+        updates.weight = Number(editedWeight);
       }
-    } catch (error) {
+
+      if (editedActivityCode && editedActivityCode !== user.activityLevel) {
+        updates.activityLevel = editedActivityCode;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        Alert.alert('Информация', 'Нет изменений');
+        return;
+      }
+
+      await updateProfile(updates);
+      Alert.alert('Успех', 'Профиль обновлён');
+      setIsEditing(false);
+    } catch {
       Alert.alert('Ошибка', 'Не удалось сохранить изменения');
     }
   };
@@ -133,7 +140,7 @@ export default function ProfileScreen() {
     if (user) {
       setEditedHeight(user.height?.toString() || '');
       setEditedWeight(user.weight?.toString() || '');
-      setEditedActivityLevel(user.activityLevel || 1.55);
+      setEditedActivityCode(user.activityLevel ?? null);
     }
     setIsEditing(false);
   };
@@ -292,26 +299,26 @@ export default function ProfileScreen() {
                     <View style={styles.activitySelector}>
                       {activityLevels.map((level) => (
                         <TouchableOpacity
-                          key={level.value}
+                          key={level.code}
                           style={[
                             styles.activityOption,
-                            editedActivityLevel === level.value && styles.activityOptionActive
+                            editedActivityCode === level.code && styles.activityOptionActive
                           ]}
-                          onPress={() => setEditedActivityLevel(level.value)}
+                          onPress={() => setEditedActivityCode(level.code)}
                         >
                           <Text style={[
                             styles.activityOptionText,
-                            editedActivityLevel === level.value && styles.activityOptionTextActive
+                            editedActivityCode === level.code && styles.activityOptionTextActive
                           ]}>
-                            {level.label}
+                            {level.name}
                           </Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                   ) : (
                     <Text style={styles.fieldValue}>
-                      {user?.activityLevel 
-                        ? activityLevels.find(l => l.value === user.activityLevel)?.label || 'Не указана'
+                      {user?.activityLevel
+                        ? activityLevels.find(l => l.code === user.activityLevel)?.name || 'Не указана'
                         : 'Не указана'}
                     </Text>
                   )}

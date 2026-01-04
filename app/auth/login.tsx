@@ -120,17 +120,6 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          style={styles.demoButton}
-          onPress={() => {
-            setEmail('demo@example.com');
-            setPassword('demo123');
-          }}
-          disabled={isLoading}
-        >
-          <Text style={styles.demoButtonText}>Заполнить демо-данные</Text>
-        </TouchableOpacity>
-
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Нажимая &quot;Войти&quot;, вы соглашаетесь с условиями использования

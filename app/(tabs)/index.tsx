@@ -20,8 +20,6 @@ import {
   Flame,
   ChevronRight,
   User,
-  Edit2,
-  Save,
   Cloud,
   UserCheck,
   UserX
@@ -34,49 +32,87 @@ export default function CalculatorScreen() {
   const [height, setHeight] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [activityLevel, setActivityLevel] = useState<number>(1.55);
+  const [activityLevel, setActivityLevel] = useState<string>('moderate');
   const [goal, setGoal] = useState<'loss' | 'maintain' | 'gain'>('maintain');
-  const [useProfileData, setUseProfileData] = useState(isAuthenticated);
   const [saveToProfile, setSaveToProfile] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   
   const activityLevels = [
-    { label: 'Сидячий', value: 1.2, desc: 'Мало или нет тренировок' },
-    { label: 'Легкая', value: 1.375, desc: '1-3 тренировки в неделю' },
-    { label: 'Умеренная', value: 1.55, desc: '3-5 тренировок в неделю' },
-    { label: 'Высокая', value: 1.725, desc: '6-7 тренировок в неделю' },
-    { label: 'Экстремальная', value: 1.9, desc: 'Тяжелая работа + тренировки' },
+    { code: 'sedentary', name: 'Сидячий', coef: 1.2, desc: 'Мало или нет тренировок' },
+    { code: 'light', name: 'Легкая', coef: 1.375, desc: '1-3 тренировки в неделю' },
+    { code: 'moderate', name: 'Умеренная', coef: 1.55, desc: '3-5 тренировок в неделю' },
+    { code: 'high', name: 'Высокая', coef: 1.725, desc: '6-7 тренировок в неделю' },
+    { code: 'extreme', name: 'Экстремальная', coef: 1.9, desc: 'Тяжелая работа + тренировки' },
   ];
+
+  // Функция для получения коэффициента по коду
+  const getCoefficientFromCode = (code: string): number => {
+    const activity = activityLevels.find(item => item.code === code);
+    return activity ? activity.coef : 1.55;
+  };
+
+  // Функция расчета возраста из birthDate
+  const calculateAgeFromBirthDate = (birthDate: string | null | undefined): string => {
+    if (!birthDate) return '';
+    
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age.toString();
+  };
+
+  // Функция сброса данных
+  const resetFormData = useCallback(() => {
+    setWeight('');
+    setHeight('');
+    setAge('');
+    setGender('male');
+    setActivityLevel('moderate');
+    setGoal('maintain');
+    setSaveToProfile(false);
+  }, []);
 
   // Загрузка данных из профиля
   const loadProfileData = useCallback(() => {
     if (!user) return;
     
+    // Загружаем данные пользователя, если они есть
     if (user.gender) setGender(user.gender);
     if (user.activityLevel) setActivityLevel(user.activityLevel);
     if (user.height) setHeight(user.height.toString());
+    if (user.weight) setWeight(user.weight.toString());
     
     // Расчет возраста из даты рождения
     if (user.birthDate) {
-      const birth = new Date(user.birthDate);
-      const today = new Date();
-      let age = today.getFullYear() - birth.getFullYear();
-      const monthDiff = today.getMonth() - birth.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-      }
-      
-      setAge(age.toString());
+      const age = calculateAgeFromBirthDate(user.birthDate);
+      setAge(age);
     }
   }, [user]);
 
-  // Загрузка данных из профиля при изменении зависимостей
+  // Обработка смены пользователя или статуса авторизации
   useEffect(() => {
-    if (isAuthenticated && user && useProfileData) {
+    if (isAuthenticated && user) {
+      // Всегда загружаем данные из профиля для авторизованных пользователей
       loadProfileData();
+    } else {
+      // Если пользователь вышел или не авторизован
+      resetFormData();
     }
-  }, [isAuthenticated, user, useProfileData, loadProfileData]);
+  }, [isAuthenticated, user, loadProfileData, resetFormData]);
+
+  // Дополнительный эффект для отслеживания изменения пользователя
+  useEffect(() => {
+    // Этот эффект срабатывает при смене пользователя
+    console.log('User changed:', user?.id);
+    
+    // Сбрасываем saveToProfile при смене пользователя
+    setSaveToProfile(false);
+  }, [user?.id]);
 
   const calculateTDEE = async () => {
     if (!weight || !height || !age) {
@@ -88,6 +124,17 @@ export default function CalculatorScreen() {
     const heightNum = parseFloat(height);
     const ageNum = parseInt(age);
 
+    // Валидация данных
+    if (isNaN(weightNum) || isNaN(heightNum) || isNaN(ageNum)) {
+      Alert.alert('Ошибка', 'Пожалуйста, введите корректные числа');
+      return;
+    }
+
+    if (weightNum <= 0 || heightNum <= 0 || ageNum <= 0) {
+      Alert.alert('Ошибка', 'Значения должны быть положительными числами');
+      return;
+    }
+
     // Формула Миффлина-Сан Жеора
     let bmr;
     if (gender === 'male') {
@@ -96,7 +143,8 @@ export default function CalculatorScreen() {
       bmr = 10 * weightNum + 6.25 * heightNum - 5 * ageNum - 161;
     }
 
-    const tdee = bmr * activityLevel;
+    const coefficient = getCoefficientFromCode(activityLevel);
+    const tdee = bmr * coefficient;
     
     let targetCalories;
     switch (goal) {
@@ -113,15 +161,19 @@ export default function CalculatorScreen() {
     // Сохраняем данные если нужно
     if (isAuthenticated && saveToProfile && user && updateProfile) {
       const updates: any = {};
-      if (weightNum && weightNum !== user.weight) updates.weight = weightNum;
-      if (heightNum && heightNum !== user.height) updates.height = heightNum;
-      if (activityLevel !== user.activityLevel) updates.activityLevel = activityLevel;
+      
+      // Сохраняем только если значения валидны
+      if (!isNaN(weightNum) && weightNum > 0) updates.weight = weightNum;
+      if (!isNaN(heightNum) && heightNum > 0) updates.height = heightNum;
+      if (activityLevel) updates.activityLevel = activityLevel;
       
       if (Object.keys(updates).length > 0) {
         try {
           await updateProfile(updates);
+          Alert.alert('Успех', 'Данные сохранены в профиль');
         } catch (error) {
           console.log('Не удалось сохранить данные:', error);
+          Alert.alert('Ошибка', 'Не удалось сохранить данные в профиль');
         }
       }
     }
@@ -135,46 +187,20 @@ export default function CalculatorScreen() {
       [
         { 
           text: 'Отлично!', 
-          style: 'default',
-          onPress: () => {
-            // Сбрасываем редактирование после расчета
-            if (isEditing) {
-              setIsEditing(false);
-              if (useProfileData && isAuthenticated) {
-                loadProfileData();
-              }
-            }
-          }
+          style: 'default'
         }
       ]
     );
   };
 
-  const handleEditToggle = () => {
-    if (isEditing) {
-      // Отмена редактирования - возвращаем данные из профиля
-      if (useProfileData && isAuthenticated) {
-        loadProfileData();
-      }
-    }
-    setIsEditing(!isEditing);
-  };
-
-  const handleSaveProfileData = () => {
-    const newValue = !useProfileData;
-    setUseProfileData(newValue);
-    if (newValue && isAuthenticated) {
-      // Включаем использование профиля - загружаем данные
-      loadProfileData();
-    }
-  };
-
-  // Определяем, можно ли редактировать поле
-  const isFieldEditable = (fieldName: string) => {
-    if (!isAuthenticated) return true; // Неавторизованные всегда могут редактировать
-    if (!useProfileData) return true; // Если отключено использование профиля
-    if (isEditing) return true; // Если включен режим редактирования
-    return false; // Во всех остальных случаях нельзя редактировать
+  // Функция для быстрого заполнения примера
+  const fillExampleData = () => {
+    setWeight('70');
+    setHeight('175');
+    setAge('30');
+    setGender('male');
+    setActivityLevel('moderate');
+    setGoal('maintain');
   };
 
   return (
@@ -184,27 +210,7 @@ export default function CalculatorScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Приветствие и статус профиля */}
-        <View style={styles.header}>
-          <View style={styles.welcomeRow}>
-            <View>
-              <Text style={styles.welcomeTitle}>
-                {isAuthenticated ? `Привет, ${user?.name?.split(' ')[0] || 'друг'}!` : 'Добро пожаловать!'}
-              </Text>
-              <Text style={styles.welcomeSubtitle}>
-                {isAuthenticated ? 'Рады снова видеть вас' : 'Начните свой путь к цели'}
-              </Text>
-            </View>
-            {isAuthenticated ? (
-              <View style={styles.userBadge}>
-                <UserCheck size={20} color="#3B82F6" />
-              </View>
-            ) : (
-              <View style={styles.userBadge}>
-                <UserX size={20} color="#9CA3AF" />
-              </View>
-            )}
-          </View>
-          
+        <View style={styles.header}>   
           <View style={styles.appTitleContainer}>
             <Flame size={28} color="#3B82F6" />
             <Text style={styles.appTitle}>МетаБаланс</Text>
@@ -212,48 +218,17 @@ export default function CalculatorScreen() {
           <Text style={styles.appSubtitle}>Калькулятор TDEE и калорий</Text>
         </View>
 
-        {/* Переключатель использования данных профиля (только для авторизованных) */}
-        {isAuthenticated && (
-          <View style={styles.profileToggle}>
-            <View style={styles.profileToggleInfo}>
-              <User size={18} color="#3B82F6" />
-              <View>
-                <Text style={styles.profileToggleTitle}>
-                  Использовать данные профиля
-                </Text>
-                <Text style={styles.profileToggleSubtitle}>
-                  {useProfileData 
-                    ? 'Данные загружены из вашего профиля' 
-                    : 'Введите данные вручную'}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={useProfileData}
-              onValueChange={handleSaveProfileData}
-              trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
-            />
-          </View>
-        )}
-
         {/* Основные данные */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Scale size={22} color="#3B82F6" />
             <Text style={styles.sectionTitle}>Основные данные</Text>
-            {isAuthenticated && useProfileData && (
+            {!isAuthenticated && (
               <TouchableOpacity 
-                style={styles.editButton}
-                onPress={handleEditToggle}
+                style={styles.exampleButton}
+                onPress={fillExampleData}
               >
-                {isEditing ? (
-                  <Save size={18} color="#10B981" />
-                ) : (
-                  <Edit2 size={18} color="#6B7280" />
-                )}
-                <Text style={styles.editButtonText}>
-                  {isEditing ? 'Сохранить' : 'Изменить'}
-                </Text>
+                <Text style={styles.exampleButtonText}>Пример</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -268,7 +243,6 @@ export default function CalculatorScreen() {
                 onChangeText={setWeight}
                 keyboardType="numeric"
                 placeholderTextColor="#9CA3AF"
-                editable={isFieldEditable('weight')}
               />
             </View>
             
@@ -281,7 +255,6 @@ export default function CalculatorScreen() {
                 onChangeText={setHeight}
                 keyboardType="numeric"
                 placeholderTextColor="#9CA3AF"
-                editable={isFieldEditable('height')}
               />
             </View>
             
@@ -294,7 +267,6 @@ export default function CalculatorScreen() {
                 onChangeText={setAge}
                 keyboardType="numeric"
                 placeholderTextColor="#9CA3AF"
-                editable={isFieldEditable('age')}
               />
             </View>
           </View>
@@ -303,11 +275,9 @@ export default function CalculatorScreen() {
             <TouchableOpacity
               style={[
                 styles.genderButton,
-                gender === 'male' && styles.genderButtonActive,
-                (!isFieldEditable('gender')) && styles.genderButtonDisabled
+                gender === 'male' && styles.genderButtonActive
               ]}
-              onPress={() => isFieldEditable('gender') && setGender('male')}
-              disabled={!isFieldEditable('gender')}
+              onPress={() => setGender('male')}
             >
               <Text style={[
                 styles.genderText,
@@ -317,11 +287,9 @@ export default function CalculatorScreen() {
             <TouchableOpacity
               style={[
                 styles.genderButton,
-                gender === 'female' && styles.genderButtonActive,
-                (!isFieldEditable('gender')) && styles.genderButtonDisabled
+                gender === 'female' && styles.genderButtonActive
               ]}
-              onPress={() => isFieldEditable('gender') && setGender('female')}
-              disabled={!isFieldEditable('gender')}
+              onPress={() => setGender('female')}
             >
               <Text style={[
                 styles.genderText,
@@ -345,22 +313,20 @@ export default function CalculatorScreen() {
           >
             {activityLevels.map((level) => (
               <TouchableOpacity
-                key={level.value}
+                key={level.code}
                 style={[
                   styles.activityCard,
-                  activityLevel === level.value && styles.activityCardActive,
-                  (!isFieldEditable('activity')) && styles.activityCardDisabled
+                  activityLevel === level.code && styles.activityCardActive
                 ]}
-                onPress={() => isFieldEditable('activity') && setActivityLevel(level.value)}
-                disabled={!isFieldEditable('activity')}
+                onPress={() => setActivityLevel(level.code)}
               >
                 <Text style={[
                   styles.activityCardValue,
-                  activityLevel === level.value && styles.activityCardValueActive
+                  activityLevel === level.code && styles.activityCardValueActive
                 ]}>
-                  {level.value}
+                  {level.coef}
                 </Text>
-                <Text style={styles.activityCardLabel}>{level.label}</Text>
+                <Text style={styles.activityCardLabel}>{level.name}</Text>
                 <Text style={styles.activityCardDesc}>{level.desc}</Text>
               </TouchableOpacity>
             ))}
@@ -425,29 +391,6 @@ export default function CalculatorScreen() {
           </View>
         )}
 
-        {/* Информация о режимах */}
-        {isAuthenticated ? (
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>ℹ️ Как это работает:</Text>
-            <Text style={styles.infoText}>
-              • <Text style={styles.infoBold}>Режим профиля</Text> - данные подставляются автоматически{'\n'}
-              • <Text style={styles.infoBold}>Режим редактирования</Text> - временно измените данные{'\n'}
-              • <Text style={styles.infoBold}>Ручной режим</Text> - отключите использование профиля{'\n'}
-              • <Text style={styles.infoBold}>Сохранение</Text> - включите для обновления профиля
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>ℹ️ Как это работает:</Text>
-            <Text style={styles.infoText}>
-              • <Text style={styles.infoBold}>Без авторизации</Text> - вводите данные вручную{'\n'}
-              • <Text style={styles.infoBold}>Расчёт для друга</Text> - просто заполните поля{'\n'}
-              • <Text style={styles.infoBold}>История расчётов</Text> - доступна после регистрации{'\n'}
-              • <Text style={styles.infoBold}>Автосохранение</Text> - доступно после входа в аккаунт
-            </Text>
-          </View>
-        )}
-
         {/* Кнопка расчета */}
         <TouchableOpacity 
           style={styles.calculateButton} 
@@ -474,7 +417,7 @@ export default function CalculatorScreen() {
                   Зарегистрируйтесь для большего
                 </Text>
                 <Text style={styles.registerPromptSubtitle}>
-                  Сохраняйте историю расчётов и настройте авто-заполнение
+                  Сохраняйте данные в профиле и получайте персонализированные рекомендации
                 </Text>
               </View>
               <ChevronRight size={20} color="#9CA3AF" />
@@ -544,33 +487,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
-  profileToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  profileToggleInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  profileToggleTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  profileToggleSubtitle: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
   section: {
     marginBottom: 28,
   },
@@ -585,6 +501,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     flex: 1,
+  },
+  exampleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  exampleButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
   },
   editButton: {
     flexDirection: 'row',
@@ -640,9 +567,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#3B82F6',
     borderColor: '#3B82F6',
   },
-  genderButtonDisabled: {
-    opacity: 0.5,
-  },
   genderText: {
     fontSize: 16,
     fontWeight: '500',
@@ -667,9 +591,6 @@ const styles = StyleSheet.create({
   activityCardActive: {
     backgroundColor: '#EFF6FF',
     borderColor: '#3B82F6',
-  },
-  activityCardDisabled: {
-    opacity: 0.5,
   },
   activityCardValue: {
     fontSize: 24,

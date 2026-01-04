@@ -1,177 +1,257 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiFetch } from '@/api/client';
 
-interface UserProfile {
+/* =======================
+   FRONTEND MODELS
+======================= */
+
+export type User = {
   id: string;
-  name: string;
   email: string;
+  createdAt: string;
+
+  name: string;
   gender: 'male' | 'female';
-  birthDate: string; // ISO string
-  height?: number; // в см
-  weight?: number; // в кг
-  activityLevel?: number; // множитель активности
-  joinDate: string;
-  lastSync?: string;
-}
+  birthDate: string | null;
 
-interface AuthContextType {
-  isAuthenticated: boolean;
-  user: UserProfile | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
-  isLoading: boolean;
-  isSyncing: boolean;
-}
+  height: number | null;
+  weight: number | null;
+  activityLevel: string | null;
+};
 
-interface RegisterData {
+export type RegisterData = {
   name: string;
   email: string;
   password: string;
   gender: 'male' | 'female';
   birthDate: string;
+};
+
+/* =======================
+   BACKEND DTO (RAW)
+======================= */
+
+type BackendUserResponse = {
+  id: string;
+  email: string;
+  created_at: string;
+  profile?: {
+    name: string;
+    gender: 'male' | 'female';
+    birth_date: string | null;
+    height_cm?: number | null;
+    weight_kg?: number | null;
+    activity_level_id?: number | null;
+    activity_level_code?: string | null;
+  } | null;
+};
+
+/* =======================
+   CONTEXT
+======================= */
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isSyncing: boolean;
+
+  login: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
+  updateProfile: (data: {
+    height?: number | null;
+    weight?: number | null;
+    activityLevel?: string | null;
+  }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+const TOKEN_KEY = '@token';
 
-const STORAGE_KEY = '@metabalance_user';
+/* =======================
+   NORMALIZATION
+======================= */
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+const normalizeUser = (data: BackendUserResponse): User => ({
+  id: data.id,
+  email: data.email,
+  createdAt: data.created_at,
+
+  name: data.profile?.name ?? '',
+  gender: data.profile?.gender ?? 'male',
+  birthDate: data.profile?.birth_date ?? null,
+
+  height: data.profile?.height_cm ?? null,
+  weight: data.profile?.weight_kg ?? null,
+  activityLevel: data.profile?.activity_level_code ?? null,
+});
+
+/* =======================
+   PROVIDER
+======================= */
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Загрузка сохраненного пользователя при запуске
   useEffect(() => {
-    loadUserFromStorage();
+    restoreSession();
   }, []);
 
-  const loadUserFromStorage = async () => {
+  /* =======================
+     SESSION RESTORE
+  ======================= */
+
+  const restoreSession = async () => {
+    setIsLoading(true);
     try {
-      const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error('Failed to load user from storage:', error);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+
+      const me = await apiFetch('/users/me');
+      setUser(normalizeUser(me));
+      setIsAuthenticated(true);
+    } catch {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      setUser(null);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const saveUserToStorage = async (userData: UserProfile) => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-    } catch (error) {
-      console.error('Failed to save user to storage:', error);
-    }
-  };
-
-  const calculateAge = (birthDate: string): number => {
-    const birth = new Date(birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    
-    return age;
-  };
+  /* =======================
+     LOGIN
+  ======================= */
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    
-    // Имитация запроса к API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Демо-пользователь
-    const demoUser: UserProfile = {
-      id: '1',
-      name: 'Алексей Петров',
-      email: email || 'alexey@example.com',
-      gender: 'male',
-      birthDate: '1990-01-15',
-      height: 175,
-      weight: 75,
-      activityLevel: 1.55,
-      joinDate: '2024-01-15',
-    };
-    
-    setUser(demoUser);
-    setIsAuthenticated(true);
-    await saveUserToStorage(demoUser);
-    setIsLoading(false);
+    try {
+      const tokenResponse = await apiFetch('/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          username: email,
+          password,
+        }).toString(),
+      });
+
+      await AsyncStorage.setItem(TOKEN_KEY, tokenResponse.access_token);
+
+      const me = await apiFetch('/users/me');
+      console.log(me);
+      setUser(normalizeUser(me));
+      setIsAuthenticated(true);
+    } catch (err: unknown) {
+      const message =
+        typeof err === 'object' && err !== null && 'detail' in err
+          ? String((err as any).detail)
+          : 'Login failed';
+
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  /* =======================
+     REGISTER
+  ======================= */
 
   const register = async (data: RegisterData) => {
     setIsLoading(true);
-    
-    // Имитация запроса к API
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const newUser: UserProfile = {
-      id: Date.now().toString(),
-      name: data.name,
-      email: data.email,
-      gender: data.gender,
-      birthDate: data.birthDate,
-      joinDate: new Date().toISOString(),
-    };
-    
-    setUser(newUser);
-    setIsAuthenticated(true);
-    await saveUserToStorage(newUser);
-    setIsLoading(false);
+    try {
+      await apiFetch('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          name: data.name,
+          gender: data.gender,
+          birth_date: data.birthDate,
+        }),
+      });
+
+      await login(data.email, data.password);
+    } catch (err: unknown) {
+      const message =
+        typeof err === 'object' && err !== null && 'detail' in err
+          ? String((err as any).detail)
+          : 'Registration failed';
+
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updateProfile = async (updates: Partial<UserProfile>): Promise<void> => {
-    if (!user) return;
-    
+  /* =======================
+     UPDATE PROFILE
+  ======================= */
+
+  const updateProfile = async (updates: {
+    height?: number | null;
+    weight?: number | null;
+    activityLevel?: string | null;
+  }) => {
     setIsSyncing(true);
-    
-    // Имитация синхронизации с сервером
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const updatedUser = {
-      ...user,
-      ...updates,
-      lastSync: new Date().toISOString(),
-    };
-    
-    setUser(updatedUser);
-    await saveUserToStorage(updatedUser);
-    setIsSyncing(false);
-    
-    // Не возвращаем значение, только Promise<void>
+    try {
+      const payload = {
+        height_cm: updates.height,
+        weight_kg: updates.weight,
+        activity_level_code: updates.activityLevel,
+      };
+
+      const updated = await apiFetch('/users/me/profile', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+
+      // console.log('Backend response:', updated);
+      // console.log('Activity code from backend:', updated.profile?.activity_level_code);
+
+      setUser(normalizeUser(updated));
+    } catch (error) {
+      console.error('Update profile error:', error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
+  /* =======================
+     LOGOUT (CLIENT ONLY)
+  ======================= */
+
+  const logout = async () => {
+    await AsyncStorage.removeItem(TOKEN_KEY);
     setUser(null);
-    AsyncStorage.removeItem(STORAGE_KEY).catch(console.error);
+    setIsAuthenticated(false);
   };
 
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated,
         user,
+        isAuthenticated,
+        isLoading,
+        isSyncing,
         login,
         register,
         logout,
         updateProfile,
-        isLoading,
-        isSyncing,
       }}
     >
       {children}
@@ -179,11 +259,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-// Хук для использования контекста
+/* =======================
+   HOOK
+======================= */
+
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth must be used within AuthProvider');
   }
-  return context;
+  return ctx;
 };

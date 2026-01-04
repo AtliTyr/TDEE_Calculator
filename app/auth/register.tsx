@@ -109,15 +109,6 @@ export default function RegisterScreen() {
     }
   };
 
-  const fillDemoData = () => {
-    setName('Иван Иванов');
-    setEmail('ivan@example.com');
-    setPassword('Demo123!');
-    setConfirmPassword('Demo123!');
-    setGender('male');
-    setBirthDate(new Date(1990, 0, 1));
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -384,15 +375,6 @@ export default function RegisterScreen() {
               <Text style={styles.loginButtonText}>Войти</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Демо кнопка */}
-          <TouchableOpacity 
-            style={styles.demoButton}
-            onPress={fillDemoData}
-            disabled={isLoading}
-          >
-            <Text style={styles.demoButtonText}>Заполнить демо-данные</Text>
-          </TouchableOpacity>
 
           {/* Футер с информацией */}
           <View style={styles.footer}>
