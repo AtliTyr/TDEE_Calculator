@@ -182,7 +182,7 @@ export default function ProfileScreen() {
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{user?.name || 'Пользователь'}</Text>
                 <Text style={styles.userEmail}>{user?.email || 'email@example.com'}</Text>
-                <View style={styles.userStats}>
+                {/* <View style={styles.userStats}>
                   <View style={styles.userStat}>
                     <Star size={14} color="#F59E0B" />
                     <Text style={styles.userStatText}>Базовый</Text>
@@ -191,11 +191,11 @@ export default function ProfileScreen() {
                     <Check size={14} color="#10B981" />
                     <Text style={styles.userStatText}>Активен</Text>
                   </View>
-                </View>
+                </View> */}
               </View>
             </View>
             
-            <View style={styles.quickStats}>
+            {/* <View style={styles.quickStats}>
               <View style={styles.quickStat}>
                 <Text style={styles.quickStatValue}>24</Text>
                 <Text style={styles.quickStatLabel}>Расчётов</Text>
@@ -208,7 +208,7 @@ export default function ProfileScreen() {
                 <Text style={styles.quickStatValue}>85%</Text>
                 <Text style={styles.quickStatLabel}>Прогресс</Text>
               </View>
-            </View>
+            </View> */}
 
             {/* Редактирование профиля */}
             <View style={styles.editSection}>

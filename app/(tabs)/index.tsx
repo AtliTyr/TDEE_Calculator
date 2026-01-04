@@ -21,10 +21,10 @@ import {
   ChevronRight,
   User,
   Cloud,
-  UserCheck,
-  UserX
+  Save
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiFetch } from '@/api/client';
 
 export default function CalculatorScreen() {
   const { isAuthenticated, user, updateProfile, isSyncing } = useAuth();
@@ -34,7 +34,9 @@ export default function CalculatorScreen() {
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [activityLevel, setActivityLevel] = useState<string>('moderate');
   const [goal, setGoal] = useState<'loss' | 'maintain' | 'gain'>('maintain');
-  const [saveToProfile, setSaveToProfile] = useState(false);
+  const [saveToProfile, setSaveToProfile] = useState(true); // По умолчанию включено
+  const [saveCalculations, setSaveCalculations] = useState(true); // Сохранение расчетов в историю
+  const [isCalculating, setIsCalculating] = useState(false);
   
   const activityLevels = [
     { code: 'sedentary', name: 'Сидячий', coef: 1.2, desc: 'Мало или нет тренировок' },
@@ -75,7 +77,58 @@ export default function CalculatorScreen() {
     setActivityLevel('moderate');
     setGoal('maintain');
     setSaveToProfile(false);
+    setSaveCalculations(false);
   }, []);
+
+  // Функция для маппинга цели на goal_id
+  const getGoalId = (goal: 'loss' | 'maintain' | 'gain'): number => {
+    const goalMap = {
+      'loss': 1,    // Похудеть
+      'maintain': 2, // Поддерживать
+      'gain': 3      // Набрать
+    };
+    return goalMap[goal];
+  };
+
+  // Функция для маппинга уровня активности на ID
+  const getActivityLevelId = (code: string): number => {
+    const activityMap: Record<string, number> = {
+      'sedentary': 1,
+      'light': 2,
+      'moderate': 3,
+      'high': 4,
+      'extreme': 5
+    };
+    return activityMap[code] || 3; // По умолчанию moderate
+  };
+
+  // Функция для создания расчета в бэкенде
+  const createCalculation = async (
+    bmr: number,
+    tdee: number,
+    targetCalories: number,
+    goalId: number,
+    inputData: any,
+    results: any
+  ) => {
+    try {
+      const calculationData = {
+        goal_id: goalId,
+        input_data: inputData,
+        results: results
+      };
+
+      await apiFetch('/calculations/', {
+        method: 'POST',
+        body: JSON.stringify(calculationData),
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Ошибка при сохранении расчета:', error);
+      return false;
+    }
+  };
 
   // Загрузка данных из профиля
   const loadProfileData = useCallback(() => {
@@ -92,6 +145,10 @@ export default function CalculatorScreen() {
       const age = calculateAgeFromBirthDate(user.birthDate);
       setAge(age);
     }
+
+    // Для авторизованных пользователей включаем сохранение по умолчанию
+    setSaveToProfile(true);
+    setSaveCalculations(true);
   }, [user]);
 
   // Обработка смены пользователя или статуса авторизации
@@ -109,9 +166,6 @@ export default function CalculatorScreen() {
   useEffect(() => {
     // Этот эффект срабатывает при смене пользователя
     console.log('User changed:', user?.id);
-    
-    // Сбрасываем saveToProfile при смене пользователя
-    setSaveToProfile(false);
   }, [user?.id]);
 
   const calculateTDEE = async () => {
@@ -135,62 +189,111 @@ export default function CalculatorScreen() {
       return;
     }
 
-    // Формула Миффлина-Сан Жеора
-    let bmr;
-    if (gender === 'male') {
-      bmr = 10 * weightNum + 6.25 * heightNum - 5 * ageNum + 5;
-    } else {
-      bmr = 10 * weightNum + 6.25 * heightNum - 5 * ageNum - 161;
-    }
+    setIsCalculating(true);
 
-    const coefficient = getCoefficientFromCode(activityLevel);
-    const tdee = bmr * coefficient;
-    
-    let targetCalories;
-    switch (goal) {
-      case 'loss':
-        targetCalories = Math.round(tdee * 0.8);
-        break;
-      case 'gain':
-        targetCalories = Math.round(tdee * 1.1);
-        break;
-      default:
-        targetCalories = Math.round(tdee);
-    }
+    try {
+      // Формула Миффлина-Сан Жеора
+      let bmr;
+      if (gender === 'male') {
+        bmr = 10 * weightNum + 6.25 * heightNum - 5 * ageNum + 5;
+      } else {
+        bmr = 10 * weightNum + 6.25 * heightNum - 5 * ageNum - 161;
+      }
 
-    // Сохраняем данные если нужно
-    if (isAuthenticated && saveToProfile && user && updateProfile) {
-      const updates: any = {};
+      const coefficient = getCoefficientFromCode(activityLevel);
+      const tdee = bmr * coefficient;
       
-      // Сохраняем только если значения валидны
-      if (!isNaN(weightNum) && weightNum > 0) updates.weight = weightNum;
-      if (!isNaN(heightNum) && heightNum > 0) updates.height = heightNum;
-      if (activityLevel) updates.activityLevel = activityLevel;
-      
-      if (Object.keys(updates).length > 0) {
-        try {
-          await updateProfile(updates);
-          Alert.alert('Успех', 'Данные сохранены в профиль');
-        } catch (error) {
-          console.log('Не удалось сохранить данные:', error);
-          Alert.alert('Ошибка', 'Не удалось сохранить данные в профиль');
+      let targetCalories;
+      switch (goal) {
+        case 'loss':
+          targetCalories = Math.round(tdee * 0.8);
+          break;
+        case 'gain':
+          targetCalories = Math.round(tdee * 1.1);
+          break;
+        default:
+          targetCalories = Math.round(tdee);
+      }
+
+      // Формируем данные для сохранения
+      const inputData = {
+        weight: weightNum,
+        height: heightNum,
+        age: ageNum,
+        gender: gender,
+        activity_level: activityLevel,
+        activity_level_id: getActivityLevelId(activityLevel),
+        goal: goal
+      };
+
+      const results = {
+        bmr: Math.round(bmr),
+        tdee: Math.round(tdee),
+        calorie_target: targetCalories,
+        coefficient: coefficient,
+        formula_used: 'mifflin_st_jeor'
+      };
+
+      const goalId = getGoalId(goal);
+
+      // Сохраняем в профиль если нужно
+      if (isAuthenticated && saveToProfile && user && updateProfile) {
+        const updates: any = {};
+        
+        if (!isNaN(weightNum) && weightNum > 0) updates.weight = weightNum;
+        if (!isNaN(heightNum) && heightNum > 0) updates.height = heightNum;
+        if (activityLevel) updates.activityLevel = activityLevel;
+        
+        if (Object.keys(updates).length > 0) {
+          try {
+            await updateProfile(updates);
+          } catch (error) {
+            console.log('Не удалось сохранить данные в профиль:', error);
+          }
         }
       }
-    }
 
-    Alert.alert(
-      '🎯 Результаты расчёта',
-      `🏋️‍♂️ **Основной обмен (BMR):** ${Math.round(bmr)} ккал\n\n` +
-      `🔥 **Суточный расход (TDEE):** ${Math.round(tdee)} ккал\n\n` +
-      `📊 **Целевые калории:** ${targetCalories} ккал\n\n` +
-      `💡 **Рекомендация:** ${goal === 'loss' ? 'Для похудения' : goal === 'gain' ? 'Для набора массы' : 'Для поддержания веса'}`,
-      [
-        { 
-          text: 'Отлично!', 
-          style: 'default'
+      // Сохраняем расчет в бэкенд если нужно
+      let calculationSaved = false;
+      if (isAuthenticated && saveCalculations) {
+        try {
+          calculationSaved = await createCalculation(
+            bmr,
+            tdee,
+            targetCalories,
+            goalId,
+            inputData,
+            results
+          );
+        } catch (error) {
+          console.log('Не удалось сохранить расчет:', error);
         }
-      ]
-    );
+      }
+
+      // Показываем результаты с информацией о сохранении
+      const saveInfo = calculationSaved ? '\n\n💾 Расчет сохранен в вашу историю' : '';
+      
+      Alert.alert(
+        '🎯 Результаты расчёта',
+        `🏋️‍♂️ **Основной обмен (BMR):** ${Math.round(bmr)} ккал\n\n` +
+        `🔥 **Суточный расход (TDEE):** ${Math.round(tdee)} ккал\n\n` +
+        `📊 **Целевые калории:** ${targetCalories} ккал\n\n` +
+        `💡 **Рекомендация:** ${goal === 'loss' ? 'Для похудения' : goal === 'gain' ? 'Для набора массы' : 'Для поддержания веса'}` +
+        saveInfo,
+        [
+          { 
+            text: 'Отлично!', 
+            style: 'default'
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('Ошибка при расчете:', error);
+      Alert.alert('Ошибка', 'Произошла ошибка при расчете. Попробуйте еще раз.');
+    } finally {
+      setIsCalculating(false);
+    }
   };
 
   // Функция для быстрого заполнения примера
@@ -368,38 +471,60 @@ export default function CalculatorScreen() {
           </View>
         </View>
 
-        {/* Сохранение в профиль (только для авторизованных) */}
+        {/* Сохранение в профиль и история расчетов (только для авторизованных) */}
         {isAuthenticated && (
-          <View style={styles.saveSection}>
-            <View style={styles.saveHeader}>
-              <Cloud size={20} color={saveToProfile ? "#3B82F6" : "#9CA3AF"} />
-              <Text style={styles.saveTitle}>
-                {saveToProfile ? 'Сохранение в профиль включено' : 'Сохранение в профиль отключено'}
+          <>
+            <View style={styles.saveSection}>
+              <View style={styles.saveHeader}>
+                <Cloud size={20} color={saveToProfile ? "#3B82F6" : "#9CA3AF"} />
+                <Text style={styles.saveTitle}>
+                  {saveToProfile ? 'Сохранение данных включено' : 'Сохранение данных отключено'}
+                </Text>
+              </View>
+              <Text style={styles.saveDescription}>
+                {saveToProfile 
+                  ? 'Данные расчета будут сохранены в вашем профиле'
+                  : 'Данные расчета не будут сохранены в профиле'}
               </Text>
+              <Switch
+                value={saveToProfile}
+                onValueChange={setSaveToProfile}
+                trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
+                style={styles.saveSwitch}
+              />
             </View>
-            <Text style={styles.saveDescription}>
-              {saveToProfile 
-                ? 'Данные расчета будут сохранены в вашем профиле'
-                : 'Данные расчета не будут сохранены в профиле'}
-            </Text>
-            <Switch
-              value={saveToProfile}
-              onValueChange={setSaveToProfile}
-              trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
-              style={styles.saveSwitch}
-            />
-          </View>
+
+            <View style={styles.saveSection}>
+              <View style={styles.saveHeader}>
+                <Save size={20} color={saveCalculations ? "#10B981" : "#9CA3AF"} />
+                <Text style={styles.saveTitle}>
+                  {saveCalculations ? 'История расчетов включена' : 'История расчетов отключена'}
+                </Text>
+              </View>
+              <Text style={styles.saveDescription}>
+                {saveCalculations 
+                  ? 'Каждый расчет будет сохранен в вашу историю для отслеживания прогресса'
+                  : 'Расчеты не будут сохраняться в историю'}
+              </Text>
+              <Switch
+                value={saveCalculations}
+                onValueChange={setSaveCalculations}
+                trackColor={{ false: '#D1D5DB', true: "#10B981" }}
+                style={styles.saveSwitch}
+              />
+            </View>
+          </>
         )}
 
         {/* Кнопка расчета */}
         <TouchableOpacity 
-          style={styles.calculateButton} 
+          style={[styles.calculateButton, (isCalculating || isSyncing) && styles.calculateButtonDisabled]} 
           onPress={calculateTDEE}
-          disabled={isSyncing}
+          disabled={isCalculating || isSyncing}
         >
           <Calculator size={24} color="white" />
           <Text style={styles.calculateButtonText}>
-            {isSyncing ? 'Сохранение...' : 'Рассчитать TDEE'}
+            {isCalculating ? 'Расчет...' : isSyncing ? 'Сохранение...' : 'Рассчитать TDEE'}
           </Text>
           <ChevronRight size={20} color="white" />
         </TouchableOpacity>
@@ -448,30 +573,6 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 24,
   },
-  welcomeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  userBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   appTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -509,20 +610,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   exampleButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  editButtonText: {
     fontSize: 14,
     fontWeight: '500',
     color: '#6B7280',
@@ -652,7 +739,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderRadius: 16,
     padding: 20,
-    marginBottom: 24,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -692,31 +779,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  calculateButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    shadowColor: '#9CA3AF',
+  },
   calculateButtonText: {
     color: 'white',
     fontSize: 18,
-    fontWeight: '600',
-  },
-  infoBox: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#065F46',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#065F46',
-    lineHeight: 20,
-  },
-  infoBold: {
     fontWeight: '600',
   },
   registerPrompt: {
