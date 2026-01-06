@@ -9,6 +9,8 @@ import {
   Alert,
   SafeAreaView,
   Switch,
+  Modal,
+  Animated
 } from 'react-native';
 import { 
   Calculator, 
@@ -21,7 +23,15 @@ import {
   ChevronRight,
   User,
   Cloud,
-  Save
+  Save,
+  History,
+  TrendingDown,
+  TrendingUp,
+  Minus,
+  Zap,
+  Heart,
+  Target as TargetIcon,
+  X
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/api/client';
@@ -34,9 +44,21 @@ export default function CalculatorScreen() {
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [activityLevel, setActivityLevel] = useState<string>('moderate');
   const [goal, setGoal] = useState<'loss' | 'maintain' | 'gain'>('maintain');
-  const [saveToProfile, setSaveToProfile] = useState(true); // По умолчанию включено
-  const [saveCalculations, setSaveCalculations] = useState(true); // Сохранение расчетов в историю
+  const [saveSettings, setSaveSettings] = useState({
+    saveToProfile: true,
+    saveToHistory: true
+  });
   const [isCalculating, setIsCalculating] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [calculationResults, setCalculationResults] = useState<{
+    bmr: number;
+    tdee: number;
+    targetCalories: number;
+    coefficient: number;
+    formula: string;
+  } | null>(null);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
   
   const activityLevels = [
     { code: 'sedentary', name: 'Сидячий', coef: 1.2, desc: 'Мало или нет тренировок' },
@@ -45,6 +67,27 @@ export default function CalculatorScreen() {
     { code: 'high', name: 'Высокая', coef: 1.725, desc: '6-7 тренировок в неделю' },
     { code: 'extreme', name: 'Экстремальная', coef: 1.9, desc: 'Тяжелая работа + тренировки' },
   ];
+
+  // Анимация появления результатов
+  useEffect(() => {
+    if (showResults) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+    }
+  }, [showResults]);
 
   // Функция для получения коэффициента по коду
   const getCoefficientFromCode = (code: string): number => {
@@ -76,8 +119,10 @@ export default function CalculatorScreen() {
     setGender('male');
     setActivityLevel('moderate');
     setGoal('maintain');
-    setSaveToProfile(false);
-    setSaveCalculations(false);
+    setSaveSettings({
+      saveToProfile: false,
+      saveToHistory: false
+    });
   }, []);
 
   // Функция для маппинга цели на goal_id
@@ -147,8 +192,10 @@ export default function CalculatorScreen() {
     }
 
     // Для авторизованных пользователей включаем сохранение по умолчанию
-    setSaveToProfile(true);
-    setSaveCalculations(true);
+    setSaveSettings({
+      saveToProfile: true,
+      saveToHistory: true
+    });
   }, [user]);
 
   // Обработка смены пользователя или статуса авторизации
@@ -161,12 +208,6 @@ export default function CalculatorScreen() {
       resetFormData();
     }
   }, [isAuthenticated, user, loadProfileData, resetFormData]);
-
-  // Дополнительный эффект для отслеживания изменения пользователя
-  useEffect(() => {
-    // Этот эффект срабатывает при смене пользователя
-    console.log('User changed:', user?.id);
-  }, [user?.id]);
 
   const calculateTDEE = async () => {
     if (!weight || !height || !age) {
@@ -237,7 +278,7 @@ export default function CalculatorScreen() {
       const goalId = getGoalId(goal);
 
       // Сохраняем в профиль если нужно
-      if (isAuthenticated && saveToProfile && user && updateProfile) {
+      if (isAuthenticated && saveSettings.saveToProfile && user && updateProfile) {
         const updates: any = {};
         
         if (!isNaN(weightNum) && weightNum > 0) updates.weight = weightNum;
@@ -255,7 +296,7 @@ export default function CalculatorScreen() {
 
       // Сохраняем расчет в бэкенд если нужно
       let calculationSaved = false;
-      if (isAuthenticated && saveCalculations) {
+      if (isAuthenticated && saveSettings.saveToHistory) {
         try {
           calculationSaved = await createCalculation(
             bmr,
@@ -270,23 +311,16 @@ export default function CalculatorScreen() {
         }
       }
 
-      // Показываем результаты с информацией о сохранении
-      const saveInfo = calculationSaved ? '\n\n💾 Расчет сохранен в вашу историю' : '';
+      // Устанавливаем результаты и показываем модальное окно
+      setCalculationResults({
+        bmr: Math.round(bmr),
+        tdee: Math.round(tdee),
+        targetCalories: targetCalories,
+        coefficient: coefficient,
+        formula: 'mifflin_st_jeor'
+      });
       
-      Alert.alert(
-        '🎯 Результаты расчёта',
-        `🏋️‍♂️ **Основной обмен (BMR):** ${Math.round(bmr)} ккал\n\n` +
-        `🔥 **Суточный расход (TDEE):** ${Math.round(tdee)} ккал\n\n` +
-        `📊 **Целевые калории:** ${targetCalories} ккал\n\n` +
-        `💡 **Рекомендация:** ${goal === 'loss' ? 'Для похудения' : goal === 'gain' ? 'Для набора массы' : 'Для поддержания веса'}` +
-        saveInfo,
-        [
-          { 
-            text: 'Отлично!', 
-            style: 'default'
-          }
-        ]
-      );
+      setShowResults(true);
 
     } catch (error) {
       console.error('Ошибка при расчете:', error);
@@ -296,15 +330,64 @@ export default function CalculatorScreen() {
     }
   };
 
-  // Функция для быстрого заполнения примера
-  const fillExampleData = () => {
-    setWeight('70');
-    setHeight('175');
-    setAge('30');
-    setGender('male');
-    setActivityLevel('moderate');
-    setGoal('maintain');
+  const toggleSaveSettings = () => {
+    if (saveSettings.saveToProfile && saveSettings.saveToHistory) {
+      // Если оба включены, выключаем оба
+      setSaveSettings({
+        saveToProfile: false,
+        saveToHistory: false
+      });
+    } else {
+      // Включаем оба
+      setSaveSettings({
+        saveToProfile: true,
+        saveToHistory: true
+      });
+    }
   };
+
+  const getGoalIcon = () => {
+    switch (goal) {
+      case 'loss': return <TrendingDown size={24} color="#10B981" />;
+      case 'gain': return <TrendingUp size={24} color="#F59E0B" />;
+      default: return <Minus size={24} color="#3B82F6" />;
+    }
+  };
+
+  const getGoalColor = () => {
+    switch (goal) {
+      case 'loss': return '#10B981';
+      case 'gain': return '#F59E0B';
+      default: return '#3B82F6';
+    }
+  };
+
+  const getGoalDescription = () => {
+    switch (goal) {
+      case 'loss': return 'Для похудения рекомендуется умеренный дефицит калорий';
+      case 'gain': return 'Для набора массы рекомендуется небольшой профицит калорий';
+      default: return 'Для поддержания веса придерживайтесь полученной нормы';
+    }
+  };
+
+  const renderResultCard = (
+    title: string,
+    value: string,
+    description: string,
+    icon: React.ReactNode,
+    color: string
+  ) => (
+    <View style={[styles.resultCard, { borderLeftColor: color }]}>
+      <View style={styles.resultCardHeader}>
+        <View style={[styles.resultIconContainer, { backgroundColor: color + '20' }]}>
+          {icon}
+        </View>
+        <Text style={styles.resultCardTitle}>{title}</Text>
+      </View>
+      <Text style={styles.resultCardValue}>{value}</Text>
+      <Text style={styles.resultCardDescription}>{description}</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -326,14 +409,6 @@ export default function CalculatorScreen() {
           <View style={styles.sectionHeader}>
             <Scale size={22} color="#3B82F6" />
             <Text style={styles.sectionTitle}>Основные данные</Text>
-            {!isAuthenticated && (
-              <TouchableOpacity 
-                style={styles.exampleButton}
-                onPress={fillExampleData}
-              >
-                <Text style={styles.exampleButtonText}>Пример</Text>
-              </TouchableOpacity>
-            )}
           </View>
           
           <View style={styles.inputGroup}>
@@ -471,49 +546,63 @@ export default function CalculatorScreen() {
           </View>
         </View>
 
-        {/* Сохранение в профиль и история расчетов (только для авторизованных) */}
+        {/* Общий переключатель сохранения (только для авторизованных) */}
         {isAuthenticated && (
-          <>
-            <View style={styles.saveSection}>
-              <View style={styles.saveHeader}>
-                <Cloud size={20} color={saveToProfile ? "#3B82F6" : "#9CA3AF"} />
+          <View style={styles.saveSection}>
+            <View style={styles.saveHeader}>
+              <View style={styles.saveIconContainer}>
+                {saveSettings.saveToProfile && saveSettings.saveToHistory ? (
+                  <View style={[styles.saveIcon, { backgroundColor: '#EFF6FF' }]}>
+                    <Cloud size={20} color="#3B82F6" />
+                  </View>
+                ) : (
+                  <View style={[styles.saveIcon, { backgroundColor: '#F3F4F6' }]}>
+                    <Cloud size={20} color="#9CA3AF" />
+                  </View>
+                )}
+                {saveSettings.saveToProfile && saveSettings.saveToHistory ? (
+                  <View style={[styles.saveIcon, { backgroundColor: '#F0FDF4', marginLeft: -8 }]}>
+                    <History size={20} color="#10B981" />
+                  </View>
+                ) : (
+                  <View style={[styles.saveIcon, { backgroundColor: '#F3F4F6', marginLeft: -8 }]}>
+                    <History size={20} color="#9CA3AF" />
+                  </View>
+                )}
+              </View>
+              <View style={styles.saveTextContainer}>
                 <Text style={styles.saveTitle}>
-                  {saveToProfile ? 'Сохранение данных включено' : 'Сохранение данных отключено'}
+                  {saveSettings.saveToProfile && saveSettings.saveToHistory 
+                    ? 'Сохранение данных включено' 
+                    : 'Сохранение данных отключено'}
+                </Text>
+                <Text style={styles.saveDescription}>
+                  {saveSettings.saveToProfile && saveSettings.saveToHistory
+                    ? 'Данные сохраняются в профиль и историю расчётов'
+                    : 'Данные не сохраняются'}
                 </Text>
               </View>
-              <Text style={styles.saveDescription}>
-                {saveToProfile 
-                  ? 'Данные расчета будут сохранены в вашем профиле'
-                  : 'Данные расчета не будут сохранены в профиле'}
-              </Text>
               <Switch
-                value={saveToProfile}
-                onValueChange={setSaveToProfile}
+                value={saveSettings.saveToProfile && saveSettings.saveToHistory}
+                onValueChange={toggleSaveSettings}
                 trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
-                style={styles.saveSwitch}
+                thumbColor="#FFFFFF"
               />
             </View>
-
-            <View style={styles.saveSection}>
-              <View style={styles.saveHeader}>
-                <Save size={20} color={saveCalculations ? "#10B981" : "#9CA3AF"} />
-                <Text style={styles.saveTitle}>
-                  {saveCalculations ? 'История расчетов включена' : 'История расчетов отключена'}
-                </Text>
+            
+            {saveSettings.saveToProfile && saveSettings.saveToHistory && (
+              <View style={styles.saveDetails}>
+                <View style={styles.saveDetailItem}>
+                  <Cloud size={16} color="#3B82F6" />
+                  <Text style={styles.saveDetailText}>Данные сохраняются в профиль</Text>
+                </View>
+                <View style={styles.saveDetailItem}>
+                  <History size={16} color="#10B981" />
+                  <Text style={styles.saveDetailText}>Расчет сохраняется в историю</Text>
+                </View>
               </View>
-              <Text style={styles.saveDescription}>
-                {saveCalculations 
-                  ? 'Каждый расчет будет сохранен в вашу историю для отслеживания прогресса'
-                  : 'Расчеты не будут сохраняться в историю'}
-              </Text>
-              <Switch
-                value={saveCalculations}
-                onValueChange={setSaveCalculations}
-                trackColor={{ false: '#D1D5DB', true: "#10B981" }}
-                style={styles.saveSwitch}
-              />
-            </View>
-          </>
+            )}
+          </View>
         )}
 
         {/* Кнопка расчета */}
@@ -556,6 +645,139 @@ export default function CalculatorScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Модальное окно с результатами */}
+      <Modal
+        visible={showResults}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowResults(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View 
+            style={[
+              styles.modalContent,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleContainer}>
+                <TargetIcon size={24} color={getGoalColor()} />
+                <Text style={styles.modalTitle}>🎯 Результаты расчета</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowResults(false)}
+              >
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            {calculationResults && (
+              <>
+                <View style={styles.goalSummary}>
+                  {getGoalIcon()}
+                  <Text style={[styles.goalSummaryText, { color: getGoalColor() }]}>
+                    {goal === 'loss' ? 'Похудение' : goal === 'gain' ? 'Набор массы' : 'Поддержание веса'}
+                  </Text>
+                  <Text style={styles.goalSummaryDescription}>
+                    {getGoalDescription()}
+                  </Text>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {renderResultCard(
+                    'Основной обмен (BMR)',
+                    `${calculationResults.bmr} ккал`,
+                    'Энергия, необходимая для поддержания жизнедеятельности в состоянии покоя',
+                    <Heart size={20} color="#EF4444" />,
+                    '#EF4444'
+                  )}
+
+                  {renderResultCard(
+                    'Суточный расход (TDEE)',
+                    `${calculationResults.tdee} ккал`,
+                    `Общая дневная потребность в калориях (BMR × ${calculationResults.coefficient})`,
+                    <Zap size={20} color="#F59E0B" />,
+                    '#F59E0B'
+                  )}
+
+                  {renderResultCard(
+                    'Целевые калории',
+                    `${calculationResults.targetCalories} ккал/день`,
+                    goal === 'loss' ? 'Дефицит для плавного похудения' : 
+                    goal === 'gain' ? 'Профицит для набора массы' : 
+                    'Для поддержания текущего веса',
+                    <TargetIcon size={20} color={getGoalColor()} />,
+                    getGoalColor()
+                  )}
+
+                  <View style={styles.macrosContainer}>
+                    <Text style={styles.macrosTitle}>Примерное распределение макросов:</Text>
+                    <View style={styles.macrosGrid}>
+                      <View style={[styles.macroCard, { backgroundColor: '#FEF3C7' }]}>
+                        <Text style={[styles.macroLabel, { color: '#D97706' }]}>Белки</Text>
+                        <Text style={styles.macroValue}>
+                          {Math.round(calculationResults.targetCalories * 0.3 / 4)} г
+                        </Text>
+                        <Text style={styles.macroPercentage}>30%</Text>
+                      </View>
+                      <View style={[styles.macroCard, { backgroundColor: '#DBEAFE' }]}>
+                        <Text style={[styles.macroLabel, { color: '#1D4ED8' }]}>Жиры</Text>
+                        <Text style={styles.macroValue}>
+                          {Math.round(calculationResults.targetCalories * 0.25 / 9)} г
+                        </Text>
+                        <Text style={styles.macroPercentage}>25%</Text>
+                      </View>
+                      <View style={[styles.macroCard, { backgroundColor: '#DCFCE7' }]}>
+                        <Text style={[styles.macroLabel, { color: '#15803D' }]}>Углеводы</Text>
+                        <Text style={styles.macroValue}>
+                          {Math.round(calculationResults.targetCalories * 0.45 / 4)} г
+                        </Text>
+                        <Text style={styles.macroPercentage}>45%</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.recommendations}>
+                    <Text style={styles.recommendationsTitle}>💡 Рекомендации:</Text>
+                    <View style={styles.recommendationItem}>
+                      <Text style={styles.recommendationBullet}>•</Text>
+                      <Text style={styles.recommendationText}>
+                        Придерживайтесь целевых калорий ежедневно для достижения цели
+                      </Text>
+                    </View>
+                    <View style={styles.recommendationItem}>
+                      <Text style={styles.recommendationBullet}>•</Text>
+                      <Text style={styles.recommendationText}>
+                        Взвешивайтесь раз в неделю в одно и то же время
+                      </Text>
+                    </View>
+                    <View style={styles.recommendationItem}>
+                      <Text style={styles.recommendationBullet}>•</Text>
+                      <Text style={styles.recommendationText}>
+                        При отсутствии прогресса скорректируйте калории на ±100-200 ккал
+                      </Text>
+                    </View>
+                  </View>
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity 
+                    style={[styles.actionButton, { backgroundColor: getGoalColor() }]}
+                    onPress={() => setShowResults(false)}
+                  >
+                    <Text style={styles.actionButtonText}>Отлично! Понятно</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -594,7 +816,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     marginBottom: 16,
   },
   sectionTitle: {
@@ -602,17 +824,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     flex: 1,
-  },
-  exampleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  exampleButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6B7280',
   },
   inputGroup: {
     flexDirection: 'row',
@@ -747,22 +958,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 8,
+  },
+  saveIconContainer: {
+    flexDirection: 'row',
+    position: 'relative',
+  },
+  saveIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveTextContainer: {
+    flex: 1,
   },
   saveTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    flex: 1,
+    marginBottom: 4,
   },
   saveDescription: {
     fontSize: 14,
     color: '#6B7280',
-    marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: 18,
   },
-  saveSwitch: {
-    alignSelf: 'flex-start',
+  saveDetails: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    gap: 12,
+  },
+  saveDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  saveDetailText: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   calculateButton: {
     flexDirection: 'row',
@@ -822,5 +1058,183 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     lineHeight: 18,
+  },
+  // Модальное окно стили
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    width: '100%',
+    maxHeight: '80%',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  goalSummary: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#F9FAFB',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 16,
+    gap: 8,
+  },
+  goalSummaryText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  goalSummaryDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  resultCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    borderLeftWidth: 4,
+  },
+  resultCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  resultIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  resultCardValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  resultCardDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  macrosContainer: {
+    marginHorizontal: 20,
+    marginTop: 24,
+  },
+  macrosTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 16,
+  },
+  macrosGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  macroCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  macroLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  macroValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  macroPercentage: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  recommendations: {
+    marginHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  recommendationsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  recommendationItem: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  recommendationBullet: {
+    fontSize: 16,
+    color: '#3B82F6',
+  },
+  recommendationText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  actionButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

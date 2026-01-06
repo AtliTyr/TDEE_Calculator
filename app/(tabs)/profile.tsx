@@ -9,61 +9,64 @@ import {
   ScrollView,
   SafeAreaView,
   TextInput,
+  Modal,
+  Linking,
+  Dimensions,
 } from 'react-native';
 import { 
   User, 
   Settings, 
-  Bell, 
   Moon, 
-  Globe,
+  Sun,
   HelpCircle,
   LogOut,
   LogIn,
   UserPlus,
-  Shield,
   Cloud,
-  Smartphone,
   History,
-  TrendingUp,
   Info,
   ChevronRight,
-  Check,
-  Star,
   Edit2,
   Save,
   Ruler,
   Scale,
   Activity,
   Calendar,
-  Download,
-  Upload,
-  RefreshCw
+  X,
+  MessageSquare,
+  CheckCircle,
+  AlertCircle,
+  Flame,
+  Target,
+  Calculator,
+  Star,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 export default function ProfileScreen() {
   const { isAuthenticated, user, logout, updateProfile, isLoading, isSyncing } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
-  const [notifications, setNotifications] = useState(true);
-  const [syncEnabled, setSyncEnabled] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedHeight, setEditedHeight] = useState('');
   const [editedWeight, setEditedWeight] = useState('');
   const [editedActivityCode, setEditedActivityCode] = useState<string | null>(null);
+  
+  // Модалки для помощи
+  const [showTDEEModal, setShowTDEEModal] = useState(false);
+  const [showFAQModal, setShowFAQModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Инициализация данных при загрузке
   useEffect(() => {
     if (user) {
-      // console.log('User activityLevel from backend:', user.activityLevel);
-      // console.log('User data:', JSON.stringify(user, null, 2));
-      
       setEditedHeight(user.height?.toString() || '');
       setEditedWeight(user.weight?.toString() || '');
       setEditedActivityCode(user.activityLevel ?? null);
     }
   }, [user]);
-
 
   const activityLevels = [
     { code: 'sedentary', name: 'Сидячий', coef: 1.2, desc: 'Мало или нет тренировок' },
@@ -145,6 +148,355 @@ export default function ProfileScreen() {
     setIsEditing(false);
   };
 
+  // Модалка "Как работает TDEE?"
+  const TDEEModal = () => (
+    <Modal
+      visible={showTDEEModal}
+      animationType="slide"
+      transparent={true}
+      statusBarTranslucent={true}
+      onRequestClose={() => setShowTDEEModal(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderContent}>
+              <View style={styles.modalIconContainer}>
+                <Flame size={24} color="#3B82F6" />
+              </View>
+              <Text style={styles.modalTitle}>Что такое TDEE и BMR?</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => setShowTDEEModal(false)}
+              style={styles.modalCloseButton}
+            >
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView 
+            style={styles.modalBody}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modalSection}>
+              <View style={styles.infoCard}>
+                <Info size={20} color="#3B82F6" />
+                <Text style={styles.infoCardTitle}>BMR (Basal Metabolic Rate)</Text>
+                <Text style={styles.infoCardText}>
+                  Основной обмен веществ — количество калорий, которое ваш организм сжигает в состоянии полного покоя для поддержания жизненных функций.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <View style={styles.featureItem}>
+                <View style={styles.featureIcon}>
+                  <Activity size={18} color="#F59E0B" />
+                </View>
+                <Text style={styles.featureTitle}>Что включает BMR?</Text>
+                <Text style={styles.featureDescription}>
+                  • Дыхание и работа сердца{'\n'}
+                  • Поддержание температуры тела{'\n'}
+                  • Работа мозга{'\n'}
+                  • Клеточный обмен
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <View style={styles.infoCard}>
+                <Calculator size={20} color="#EF4444" />
+                <Text style={styles.infoCardTitle}>TDEE (Total Daily Energy Expenditure)</Text>
+                <Text style={styles.infoCardText}>
+                  Общий суточный расход энергии — полное количество калорий, которое вы сжигаете за день с учётом физической активности.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <View style={styles.formulaCard}>
+                <Text style={styles.formulaTitle}>Формула расчета</Text>
+                <Text style={styles.formulaText}>
+                  TDEE = BMR × Коэффициент активности
+                </Text>
+                <View style={styles.formulaSteps}>
+                  <Text style={styles.formulaStep}>1. Рассчитываем BMR</Text>
+                  <Text style={styles.formulaDetail}>Для мужчин: 10×вес + 6.25×рост - 5×возраст + 5</Text>
+                  <Text style={styles.formulaDetail}>Для женщин: 10×вес + 6.25×рост - 5×возраст - 161</Text>
+                  
+                  <Text style={styles.formulaStep}>2. Умножаем на коэффициент</Text>
+                  <View style={styles.coefficients}>
+                    <View style={styles.coefficientItem}>
+                      <Text style={styles.coefficientValue}>×1.2</Text>
+                      <Text style={styles.coefficientLabel}>Сидячий</Text>
+                    </View>
+                    <View style={styles.coefficientItem}>
+                      <Text style={styles.coefficientValue}>×1.375</Text>
+                      <Text style={styles.coefficientLabel}>Легкая</Text>
+                    </View>
+                    <View style={styles.coefficientItem}>
+                      <Text style={styles.coefficientValue}>×1.55</Text>
+                      <Text style={styles.coefficientLabel}>Умеренная</Text>
+                    </View>
+                    <View style={styles.coefficientItem}>
+                      <Text style={styles.coefficientValue}>×1.725</Text>
+                      <Text style={styles.coefficientLabel}>Высокая</Text>
+                    </View>
+                    <View style={styles.coefficientItem}>
+                      <Text style={styles.coefficientValue}>×1.9</Text>
+                      <Text style={styles.coefficientLabel}>Экстремальная</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <View style={styles.exampleCard}>
+                <Text style={styles.exampleTitle}>📊 Пример расчета</Text>
+                <View style={styles.exampleDetails}>
+                  <Text style={styles.exampleDetail}>Мужчина, 30 лет, 75 кг, 180 см</Text>
+                  <Text style={styles.exampleDetail}>Умеренная активность (×1.55)</Text>
+                  <View style={styles.exampleCalculation}>
+                    <Text style={styles.exampleStep}>BMR = 10×75 + 6.25×180 - 5×30 + 5</Text>
+                    <Text style={styles.exampleStep}>BMR = 1705 ккал</Text>
+                    <Text style={styles.exampleStep}>TDEE = 1705 × 1.55 = 2643 ккал/день</Text>
+                    <Text style={styles.exampleStep}>Для похудения: 2643 × 0.8 = 2114 ккал/день</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <View style={styles.tipsCard}>
+                <Text style={styles.tipsTitle}>💡 Как использовать TDEE?</Text>
+                <View style={styles.tipsList}>
+                  <View style={styles.tipItem}>
+                    <View style={[styles.tipIcon, { backgroundColor: '#D1FAE5' }]}>
+                      <Target size={16} color="#10B981" />
+                    </View>
+                    <Text style={styles.tipText}>
+                      <Text style={styles.tipBold}>Поддержание веса:</Text>{'\n'}
+                      Потребляйте столько же калорий, сколько ваш TDEE
+                    </Text>
+                  </View>
+                  <View style={styles.tipItem}>
+                    <View style={[styles.tipIcon, { backgroundColor: '#FEE2E2' }]}>
+                      <Activity size={16} color="#EF4444" />
+                    </View>
+                    <Text style={styles.tipText}>
+                      <Text style={styles.tipBold}>Похудение:</Text>{'\n'}
+                      Создайте дефицит 300-500 ккал от TDEE
+                    </Text>
+                  </View>
+                  <View style={styles.tipItem}>
+                    <View style={[styles.tipIcon, { backgroundColor: '#FEF3C7' }]}>
+                      <Star size={16} color="#F59E0B" />
+                    </View>
+                    <Text style={styles.tipText}>
+                      <Text style={styles.tipBold}>Набор массы:</Text>{'\n'}
+                      Создайте профицит 300-500 ккал от TDEE
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+          
+          <View style={styles.modalFooter}>
+            <TouchableOpacity 
+              style={styles.modalButton}
+              onPress={() => setShowTDEEModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Понятно, спасибо!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Модалка "Частые вопросы"
+  const FAQModal = () => (
+    <Modal
+      visible={showFAQModal}
+      animationType="slide"
+      transparent={true}
+      statusBarTranslucent={true}
+      onRequestClose={() => setShowFAQModal(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalHeaderContent}>
+              <View style={styles.modalIconContainer}>
+                <HelpCircle size={24} color="#3B82F6" />
+              </View>
+              <Text style={styles.modalTitle}>Частые вопросы</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => setShowFAQModal(false)}
+              style={styles.modalCloseButton}
+            >
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView 
+            // style={{flex: 1}}
+            style={[styles.modalBody]}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.faqSection}>
+              <Text style={styles.faqSectionTitle}>Общие вопросы</Text>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Как часто нужно обновлять данные?</Text>
+                <Text style={styles.faqAnswer}>
+                  Рекомендуем обновлять вес каждую неделю. Рост и уровень активности — при их изменении.
+                </Text>
+              </View>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Насколько точны расчеты?</Text>
+                <Text style={styles.faqAnswer}>
+                  Точность составляет 90-95%. Для максимальной точности регулярно обновляйте данные.
+                </Text>
+              </View>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Какой коэффициент активности выбрать?</Text>
+                <Text style={styles.faqAnswer}>
+                  Выбирайте тот, который лучше всего описывает вашу недельную активность. Если сомневаетесь — выберите более низкий уровень.
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.faqSection}>
+              <Text style={styles.faqSectionTitle}>Работа с приложением</Text>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Как синхронизировать данные?</Text>
+                <Text style={styles.faqAnswer}>
+                  Все данные автоматически синхронизируются при наличии интернета. Для ручной синхронизации перезапустите приложение.
+                </Text>
+              </View>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Где хранятся мои данные?</Text>
+                <Text style={styles.faqAnswer}>
+                  Данные хранятся в защищенном облачном хранилище и на вашем устройстве. Только вы имеете к ним доступ.
+                </Text>
+              </View>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Как сбросить пароль?</Text>
+                <Text style={styles.faqAnswer}>
+                  На странице входа нажмите "Забыли пароль". Инструкция по восстановлению придет на email.
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.faqSection}>
+              <Text style={styles.faqSectionTitle}>Питание и тренировки</Text>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Сколько нужно пить воды?</Text>
+                <Text style={styles.faqAnswer}>
+                  Рекомендуется 30-40 мл на 1 кг веса. При активных тренировках — больше.
+                </Text>
+              </View>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Когда лучше тренироваться?</Text>
+                <Text style={styles.faqAnswer}>
+                  В любое удобное время. Главное — регулярность. Оптимально за 1.5-2 часа до или после еды.
+                </Text>
+              </View>
+              
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Как отслеживать прогресс?</Text>
+                <Text style={styles.faqAnswer}>
+                  Взвешивайтесь в одно и то же время суток, натощак. Делайте замеры раз в неделю.
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+          
+          <View style={styles.modalFooter}>
+            <TouchableOpacity 
+              style={styles.modalButton}
+              onPress={() => setShowFAQModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Закрыть</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Модалка "Обратная связь" (в разработке)
+  const FeedbackModal = () => (
+    <Modal
+      visible={showFeedbackModal}
+      animationType="slide"
+      transparent={true}
+      statusBarTranslucent={true}
+      onRequestClose={() => setShowFeedbackModal(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={[styles.modalContent, styles.feedbackModalContent]}>
+          <View style={styles.feedbackHeader}>
+            <View style={styles.feedbackIconContainer}>
+              <AlertCircle size={48} color="#3B82F6" />
+            </View>
+            <Text style={styles.feedbackTitle}>В разработке</Text>
+            <Text style={styles.feedbackText}>
+              Раздел обратной связи находится в разработке.{'\n'}
+              Скоро вы сможете отправлять свои предложения и сообщать об ошибках.
+            </Text>
+          </View>
+          
+          <View style={styles.feedbackBody}>
+            <View style={styles.featureItem}>
+              <CheckCircle size={20} color="#10B981" />
+              <Text style={styles.featureText}>Форма обратной связи</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <CheckCircle size={20} color="#10B981" />
+              <Text style={styles.featureText}>Отправка скриншотов</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <CheckCircle size={20} color="#10B981" />
+              <Text style={styles.featureText}>История обращений</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <CheckCircle size={20} color="#10B981" />
+              <Text style={styles.featureText}>Статус обработки</Text>
+            </View>
+          </View>
+          
+          <View style={styles.feedbackFooter}>
+            <TouchableOpacity 
+              style={styles.feedbackButton}
+              onPress={() => setShowFeedbackModal(false)}
+            >
+              <Text style={styles.feedbackButtonText}>Жду с нетерпением!</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.emailButton}
+              onPress={() => Linking.openURL('mailto:support@metabalance.ru')}
+            >
+              <Text style={styles.emailButtonText}>Написать на почту</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView 
@@ -182,34 +534,9 @@ export default function ProfileScreen() {
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{user?.name || 'Пользователь'}</Text>
                 <Text style={styles.userEmail}>{user?.email || 'email@example.com'}</Text>
-                {/* <View style={styles.userStats}>
-                  <View style={styles.userStat}>
-                    <Star size={14} color="#F59E0B" />
-                    <Text style={styles.userStatText}>Базовый</Text>
-                  </View>
-                  <View style={styles.userStat}>
-                    <Check size={14} color="#10B981" />
-                    <Text style={styles.userStatText}>Активен</Text>
-                  </View>
-                </View> */}
               </View>
             </View>
             
-            {/* <View style={styles.quickStats}>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatValue}>24</Text>
-                <Text style={styles.quickStatLabel}>Расчётов</Text>
-              </View>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatValue}>7</Text>
-                <Text style={styles.quickStatLabel}>Дней</Text>
-              </View>
-              <View style={styles.quickStat}>
-                <Text style={styles.quickStatValue}>85%</Text>
-                <Text style={styles.quickStatLabel}>Прогресс</Text>
-              </View>
-            </View> */}
-
             {/* Редактирование профиля */}
             <View style={styles.editSection}>
               <View style={styles.editHeader}>
@@ -394,127 +721,17 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Настройки */}
-        <View style={styles.settingsSection}>
-          <View style={styles.sectionHeader}>
-            <Settings size={22} color="#3B82F6" />
-            <Text style={styles.sectionTitle}>Настройки</Text>
-          </View>
-          
-          <View style={styles.settingsList}>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <View style={[styles.settingIcon, { backgroundColor: '#FEF3C7' }]}>
-                  <Moon size={20} color="#F59E0B" />
-                </View>
-                <View style={styles.settingText}>
-                  <Text style={styles.settingLabel}>Тёмная тема</Text>
-                  <Text style={styles.settingDescription}>Использовать тёмную тему</Text>
-                </View>
-              </View>
-              <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
-                thumbColor={darkMode ? '#FFFFFF' : '#FFFFFF'}
-              />
-            </View>
-            
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <View style={[styles.settingIcon, { backgroundColor: '#DBEAFE' }]}>
-                  <Bell size={20} color="#3B82F6" />
-                </View>
-                <View style={styles.settingText}>
-                  <Text style={styles.settingLabel}>Уведомления</Text>
-                  <Text style={styles.settingDescription}>Напоминания и уведомления</Text>
-                </View>
-              </View>
-              <Switch
-                value={notifications}
-                onValueChange={setNotifications}
-                trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
-                thumbColor={notifications ? '#FFFFFF' : '#FFFFFF'}
-              />
-            </View>
-            
-            {isAuthenticated && (
-              <View style={styles.settingItem}>
-                <View style={styles.settingInfo}>
-                  <View style={[styles.settingIcon, { backgroundColor: '#D1FAE5' }]}>
-                    <Cloud size={20} color="#10B981" />
-                  </View>
-                  <View style={styles.settingText}>
-                    <Text style={styles.settingLabel}>Синхронизация</Text>
-                    <Text style={styles.settingDescription}>Автоматическая синхронизация</Text>
-                  </View>
-                </View>
-                <Switch
-                  value={syncEnabled}
-                  onValueChange={setSyncEnabled}
-                  trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
-                  thumbColor={syncEnabled ? '#FFFFFF' : '#FFFFFF'}
-                />
-              </View>
-            )}
-            
-            <TouchableOpacity style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <View style={[styles.settingIcon, { backgroundColor: '#E5E7EB' }]}>
-                  <Globe size={20} color="#6B7280" />
-                </View>
-                <View style={styles.settingText}>
-                  <Text style={styles.settingLabel}>Язык</Text>
-                  <Text style={styles.settingDescription}>Русский</Text>
-                </View>
-              </View>
-              <ChevronRight size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Данные и безопасность (только для авторизованных) */}
-        {isAuthenticated && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Shield size={22} color="#3B82F6" />
-              <Text style={styles.sectionTitle}>Данные и безопасность</Text>
-            </View>
-            
-            <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuIcon}>
-                <Download size={20} color="#6B7280" />
-              </View>
-              <Text style={styles.menuText}>Экспорт данных</Text>
-              <ChevronRight size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuIcon}>
-                <Upload size={20} color="#6B7280" />
-              </View>
-              <Text style={styles.menuText}>Импорт данных</Text>
-              <ChevronRight size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.menuItem}>
-              <View style={styles.menuIcon}>
-                <RefreshCw size={20} color="#6B7280" />
-              </View>
-              <Text style={styles.menuText}>Синхронизировать сейчас</Text>
-              <ChevronRight size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Помощь */}
+        {/* Помощь и поддержка */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <HelpCircle size={22} color="#3B82F6" />
             <Text style={styles.sectionTitle}>Помощь и поддержка</Text>
           </View>
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => setShowTDEEModal(true)}
+          >
             <View style={styles.menuIcon}>
               <Info size={20} color="#6B7280" />
             </View>
@@ -522,7 +739,10 @@ export default function ProfileScreen() {
             <ChevronRight size={20} color="#9CA3AF" />
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => setShowFAQModal(true)}
+          >
             <View style={styles.menuIcon}>
               <HelpCircle size={20} color="#6B7280" />
             </View>
@@ -530,13 +750,48 @@ export default function ProfileScreen() {
             <ChevronRight size={20} color="#9CA3AF" />
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => setShowFeedbackModal(true)}
+          >
             <View style={styles.menuIcon}>
-              <History size={20} color="#6B7280" />
+              <MessageSquare size={20} color="#6B7280" />
             </View>
             <Text style={styles.menuText}>Обратная связь</Text>
             <ChevronRight size={20} color="#9CA3AF" />
           </TouchableOpacity>
+        </View>
+
+        {/* Тема (вынесена вниз) */}
+        <View style={styles.themeSection}>
+          <View style={styles.themeCard}>
+            <View style={styles.themeHeader}>
+              {darkMode ? (
+                <Moon size={24} color="#F59E0B" />
+              ) : (
+                <Sun size={24} color="#F59E0B" />
+              )}
+              <Text style={styles.themeTitle}>
+                {darkMode ? 'Тёмная тема' : 'Светлая тема'}
+              </Text>
+            </View>
+            <Text style={styles.themeDescription}>
+              {darkMode 
+                ? 'Используется тёмная цветовая схема' 
+                : 'Используется светлая цветовая схема'}
+            </Text>
+            <View style={styles.themeSwitchContainer}>
+              <Text style={styles.themeSwitchLabel}>
+                {darkMode ? 'Включена' : 'Выключена'}
+              </Text>
+              <Switch
+                value={darkMode}
+                onValueChange={setDarkMode}
+                trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
+                thumbColor={darkMode ? '#FFFFFF' : '#FFFFFF'}
+              />
+            </View>
+          </View>
         </View>
 
         {/* Кнопка выхода/входа */}
@@ -574,6 +829,11 @@ export default function ProfileScreen() {
           <Text style={styles.appCopyright}>© 2024 Все права защищены</Text>
         </View>
       </ScrollView>
+
+      {/* Модальные окна */}
+      <TDEEModal />
+      <FAQModal />
+      <FeedbackModal />
     </SafeAreaView>
   );
 }
@@ -644,40 +904,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginBottom: 8,
-  },
-  userStats: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  userStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  userStatText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  quickStats: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  quickStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  quickStatValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  quickStatLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 4,
   },
   editSection: {
     backgroundColor: 'white',
@@ -872,9 +1098,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
-  settingsSection: {
-    marginBottom: 24,
-  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -888,45 +1111,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
-  },
-  settingsList: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 8,
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  settingText: {
-    flex: 1,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
   },
   menuItem: {
     flexDirection: 'row',
@@ -948,6 +1132,39 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#111827',
+  },
+  themeSection: {
+    marginBottom: 24,
+  },
+  themeCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 20,
+  },
+  themeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  themeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  themeDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  themeSwitchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  themeSwitchLabel: {
+    fontSize: 16,
+    color: '#374151',
   },
   actionButton: {
     flexDirection: 'row',
@@ -980,5 +1197,367 @@ const styles = StyleSheet.create({
   appCopyright: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+
+  // ========== СТИЛИ МОДАЛЬНЫХ ОКОН ==========
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    height: screenHeight * 0.85,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  feedbackModalContent: {
+    padding: 0,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalBody: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  modalSection: {
+    marginBottom: 20,
+  },
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  modalButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Стили для модалки TDEE
+  infoCard: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  infoCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1E40AF',
+    marginTop: 12,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  infoCardText: {
+    fontSize: 14,
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // featureItem: {
+  //   backgroundColor: '#F9FAFB',
+  //   borderRadius: 12,
+  //   padding: 16,
+  // },
+  featureIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  featureDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  formulaCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
+  },
+  formulaTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#065F46',
+    marginBottom: 12,
+  },
+  formulaText: {
+    fontSize: 15,
+    color: '#065F46',
+    fontFamily: 'monospace',
+    marginBottom: 12,
+  },
+  formulaSteps: {
+    marginTop: 8,
+  },
+  formulaStep: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065F46',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  formulaDetail: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 4,
+    paddingLeft: 8,
+  },
+  coefficients: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  coefficientItem: {
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 8,
+    borderRadius: 8,
+    minWidth: 70,
+  },
+  coefficientValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#3B82F6',
+  },
+  coefficientLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  exampleCard: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#3B82F6',
+  },
+  exampleTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1E40AF',
+    marginBottom: 12,
+  },
+  exampleDetails: {
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 8,
+    padding: 12,
+  },
+  exampleDetail: {
+    fontSize: 14,
+    color: '#374151',
+    marginBottom: 4,
+  },
+  exampleCalculation: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#DBEAFE',
+  },
+  exampleStep: {
+    fontSize: 13,
+    color: '#1E40AF',
+    marginBottom: 4,
+    fontFamily: 'monospace',
+  },
+  tipsCard: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 16,
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#92400E',
+    marginBottom: 12,
+  },
+  tipsList: {
+    gap: 12,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  tipIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#92400E',
+    lineHeight: 20,
+  },
+  tipBold: {
+    fontWeight: '600',
+    color: '#92400E',
+  },
+
+  // Стили для модалки FAQ
+  faqSection: {
+    marginBottom: 24,
+  },
+  faqSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  faqItem: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  faqQuestion: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  faqAnswer: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+
+  // Стили для модалки обратной связи
+  feedbackHeader: {
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#F0F9FF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  feedbackIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  feedbackTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1E40AF',
+    marginBottom: 12,
+  },
+  feedbackText: {
+    fontSize: 16,
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  feedbackBody: {
+    padding: 32,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  featureText: {
+    fontSize: 16,
+    color: '#374151',
+  },
+  feedbackFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  feedbackButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  feedbackButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emailButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  emailButtonText: {
+    color: '#3B82F6',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
