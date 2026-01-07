@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { UserPlus, Mail, Lock, User, Eye, EyeOff, Check, X, Calendar, ChevronDown } from 'lucide-react-native';
+import { UserPlus, Mail, Lock, User, Eye, EyeOff, Check, X, Calendar, ChevronDown, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function RegisterScreen() {
@@ -25,7 +25,12 @@ export default function RegisterScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register, isLoading } = useAuth();
+  const { register, isLoading, sessionError, clearSessionError, hasSessionError, resetSession } = useAuth();
+
+  // Очищаем ошибки при входе на экран
+  useEffect(() => {
+    clearSessionError();
+  }, []);
 
   // Проверка требований пароля
   const passwordRequirements = {
@@ -94,20 +99,46 @@ export default function RegisterScreen() {
         gender,
         birthDate: birthDate.toISOString().split('T')[0], // YYYY-MM-DD
       });
-      Alert.alert(
-        'Регистрация успешна!',
-        'Добро пожаловать в МетаБаланс! Теперь вы можете заполнить дополнительные данные в профиле.',
-        [
-          {
-            text: 'Отлично!',
-            onPress: () => router.back(),
-          },
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось создать аккаунт. Попробуйте ещё раз.');
+      router.replace('/');
+    } catch (error: any) {
+      if (error.message === 'SESSION_EXPIRED' || error.message.includes('Сессия')) {
+        Alert.alert(
+          'Ошибка сессии',
+          'Произошла ошибка при регистрации. Пожалуйста, попробуйте снова.',
+          [
+            {
+              text: 'OK',
+              onPress: () => resetSession(),
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Ошибка', error.message || 'Не удалось создать аккаунт. Попробуйте ещё раз.');
+      }
     }
   };
+
+  // Если есть ошибка сессии, показываем специальный экран
+  if (hasSessionError) {
+    return (
+      <View style={styles.sessionErrorContainer}>
+        <AlertCircle size={64} color="#EF4444" />
+        <Text style={styles.sessionErrorTitle}>Ошибка сессии</Text>
+        <Text style={styles.sessionErrorText}>
+          Произошла ошибка сессии. Пожалуйста, попробуйте снова.
+        </Text>
+        <TouchableOpacity
+          style={styles.sessionErrorButton}
+          onPress={() => {
+            resetSession();
+            router.back();
+          }}
+        >
+          <Text style={styles.sessionErrorButtonText}>Назад</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -126,6 +157,16 @@ export default function RegisterScreen() {
               Присоединяйтесь к сообществу МетаБаланс
             </Text>
           </View>
+
+          {sessionError && !hasSessionError && (
+            <View style={styles.errorContainer}>
+              <AlertCircle size={20} color="#EF4444" />
+              <Text style={styles.errorText}>{sessionError}</Text>
+              <TouchableOpacity onPress={clearSessionError}>
+                <Text style={styles.errorClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={styles.form}>
             {/* Поле имени */}
@@ -379,7 +420,7 @@ export default function RegisterScreen() {
           {/* Футер с информацией */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Нажимая &quot;Зарегистрироваться&quot;, вы соглашаетесь с 
+              Нажимая "Зарегистрироваться", вы соглашаетесь с 
               <Text style={styles.footerLink}> условиями использования </Text>
               и
               <Text style={styles.footerLink}> политикой конфиденциальности</Text>
@@ -392,6 +433,61 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
+  sessionErrorContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  sessionErrorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  sessionErrorText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  sessionErrorButton: {
+    padding: 18,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  sessionErrorButtonText: {
+    color: '#3B82F6',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: '#DC2626',
+    fontSize: 14,
+  },
+  errorClose: {
+    color: '#DC2626',
+    fontSize: 16,
+    paddingHorizontal: 4,
+  },
   container: {
     flex: 1,
     backgroundColor: 'white',
@@ -573,20 +669,6 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     fontSize: 16,
     fontWeight: '600',
-  },
-  demoButton: {
-    marginTop: 20,
-    padding: 14,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  demoButtonText: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '500',
   },
   footer: {
     marginTop: 32,

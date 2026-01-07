@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,15 +9,20 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { Link, router } from 'expo-router';
-import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, error, clearError } = useAuth();
+
+  // Очищаем ошибки при входе на экран
+  useEffect(() => {
+    clearError();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -25,16 +30,19 @@ export default function LoginScreen() {
       return;
     }
 
+    // Базовая валидация email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Ошибка', 'Пожалуйста, введите корректный email');
+      return;
+    }
+
     try {
       await login(email, password);
-      Alert.alert('Успех', 'Вы успешно вошли в систему', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
-    } catch (error) {
-      Alert.alert('Ошибка', 'Неверный email или пароль');
+      router.replace('/');
+    } catch (error: any) {
+      // Alert уже показан в AuthContext или через error state
+      console.log('Login screen error:', error.message);
     }
   };
 
@@ -52,6 +60,13 @@ export default function LoginScreen() {
           </Text>
         </View>
 
+        {error && (
+          <View style={styles.errorContainer}>
+            <AlertCircle size={20} color="#EF4444" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         <View style={styles.form}>
           <View style={styles.inputContainer}>
             <Mail size={20} color="#9CA3AF" />
@@ -64,6 +79,7 @@ export default function LoginScreen() {
               autoCapitalize="none"
               placeholderTextColor="#9CA3AF"
               editable={!isLoading}
+              autoComplete="email"
             />
           </View>
 
@@ -77,6 +93,7 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               placeholderTextColor="#9CA3AF"
               editable={!isLoading}
+              autoComplete="password"
             />
             <TouchableOpacity 
               onPress={() => setShowPassword(!showPassword)}
@@ -89,10 +106,6 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.forgotPassword} disabled={isLoading}>
-            <Text style={styles.forgotPasswordText}>Забыли пароль?</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
@@ -122,7 +135,7 @@ export default function LoginScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Нажимая &quot;Войти&quot;, вы соглашаетесь с условиями использования
+            Нажимая "Войти", вы соглашаетесь с условиями использования
           </Text>
         </View>
       </View>
@@ -131,19 +144,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  demoButton: {
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  demoButtonText: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-
   container: {
     flex: 1,
     backgroundColor: 'white',
@@ -170,6 +170,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: '#DC2626',
+    fontSize: 14,
+  },
   form: {
     gap: 16,
   },
@@ -186,14 +202,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#111827',
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-  },
-  forgotPasswordText: {
-    color: '#3B82F6',
-    fontSize: 14,
-    fontWeight: '500',
   },
   loginButton: {
     flexDirection: 'row',

@@ -5,8 +5,13 @@ import React, {
   useState,
   ReactNode,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiFetch } from '@/api/client';
+import { 
+  apiFetch, 
+  login as apiLogin, 
+  getTokens, 
+  clearTokens,
+  saveTokens
+} from '@/api/client';
 
 /* =======================
    FRONTEND MODELS
@@ -62,6 +67,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isSyncing: boolean;
+  error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
@@ -71,11 +77,10 @@ interface AuthContextType {
     weight?: number | null;
     activityLevel?: string | null;
   }) => Promise<void>;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const TOKEN_KEY = '@token';
 
 /* =======================
    NORMALIZATION
@@ -104,27 +109,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    restoreSession();
+    checkAuth();
   }, []);
 
   /* =======================
-     SESSION RESTORE
+     ОЧИСТКА ОШИБОК
   ======================= */
 
-  const restoreSession = async () => {
+  const clearError = () => {
+    setError(null);
+  };
+
+  /* =======================
+     ПРОВЕРКА АВТОРИЗАЦИИ
+  ======================= */
+
+  const checkAuth = async () => {
     setIsLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      if (!token) return;
+      const { accessToken } = await getTokens();
+      
+      if (!accessToken) {
+        setIsAuthenticated(false);
+        return;
+      }
 
+      // Пробуем получить данные пользователя
       const me = await apiFetch('/users/me');
       setUser(normalizeUser(me));
       setIsAuthenticated(true);
-    } catch {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      setUser(null);
+    } catch (err: any) {
+      console.error('Auth check error:', err.message);
+      if (err.message !== 'NO_REFRESH_TOKEN') {
+        setError('Ошибка проверки авторизации');
+      }
       setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
@@ -132,35 +153,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /* =======================
-     LOGIN
+     ЛОГИН
   ======================= */
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      const tokenResponse = await apiFetch('/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          username: email,
-          password,
-        }).toString(),
-      });
-
-      await AsyncStorage.setItem(TOKEN_KEY, tokenResponse.access_token);
-
+      // 1. Логинимся и получаем токены
+      await apiLogin(email, password);
+      
+      // 2. Получаем данные пользователя с новым токеном
       const me = await apiFetch('/users/me');
-      console.log(me);
       setUser(normalizeUser(me));
       setIsAuthenticated(true);
-    } catch (err: unknown) {
-      const message =
-        typeof err === 'object' && err !== null && 'detail' in err
-          ? String((err as any).detail)
-          : 'Login failed';
-
+    } catch (err: any) {
+      console.error('Login error:', err.message);
+      
+      let message = err?.message || 'Ошибка авторизации';
+      
+      if (err.message === 'SESSION_EXPIRED') {
+        message = 'Сессия истекла. Пожалуйста, войдите снова.';
+      } else if (err.message === 'NO_REFRESH_TOKEN') {
+        message = 'Требуется повторная авторизация';
+      }
+      
+      setError(message);
+      await clearTokens();
       throw new Error(message);
     } finally {
       setIsLoading(false);
@@ -168,12 +188,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /* =======================
-     REGISTER
+     РЕГИСТРАЦИЯ
   ======================= */
 
   const register = async (data: RegisterData) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
+      // 1. Регистрируемся
       await apiFetch('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
@@ -185,13 +208,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }),
       });
 
+      // 2. Автоматический логин после регистрации
       await login(data.email, data.password);
-    } catch (err: unknown) {
-      const message =
-        typeof err === 'object' && err !== null && 'detail' in err
-          ? String((err as any).detail)
-          : 'Registration failed';
-
+    } catch (err: any) {
+      console.error('Register error:', err.message);
+      
+      let message = err?.message || 'Ошибка регистрации';
+      
+      if (err.message === 'SESSION_EXPIRED') {
+        message = 'Ошибка сессии. Попробуйте снова.';
+      }
+      
+      setError(message);
       throw new Error(message);
     } finally {
       setIsLoading(false);
@@ -199,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /* =======================
-     UPDATE PROFILE
+     ОБНОВЛЕНИЕ ПРОФИЛЯ
   ======================= */
 
   const updateProfile = async (updates: {
@@ -220,25 +248,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify(payload),
       });
 
-      // console.log('Backend response:', updated);
-      // console.log('Activity code from backend:', updated.profile?.activity_level_code);
-
       setUser(normalizeUser(updated));
-    } catch (error) {
-      console.error('Update profile error:', error);
+    } catch (error: any) {
+      console.error('Update profile error:', error.message);
+      
+      if (error.message === 'SESSION_EXPIRED') {
+        setError('Сессия истекла. Пожалуйста, войдите снова.');
+      } else {
+        setError('Ошибка обновления профиля');
+      }
+      throw error;
     } finally {
       setIsSyncing(false);
     }
   };
 
   /* =======================
-     LOGOUT (CLIENT ONLY)
+     ЛОГАУТ
   ======================= */
 
   const logout = async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-    setUser(null);
-    setIsAuthenticated(false);
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch (error) {
+      // Игнорируем ошибки логаута
+      console.log('Logout error (ignored):', error);
+    } finally {
+      await clearTokens();
+      setUser(null);
+      setIsAuthenticated(false);
+      setError(null);
+    }
   };
 
   return (
@@ -248,10 +288,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated,
         isLoading,
         isSyncing,
+        error,
         login,
         register,
         logout,
         updateProfile,
+        clearError,
       }}
     >
       {children}
