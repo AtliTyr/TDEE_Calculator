@@ -14,6 +14,8 @@ import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { UserPlus, Mail, Lock, User, Eye, EyeOff, Check, X, Calendar, ChevronDown, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -25,12 +27,40 @@ export default function RegisterScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register, isLoading, sessionError, clearSessionError, hasSessionError, resetSession } = useAuth();
+  const { register, isLoading, error, clearError } = useAuth();
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
+
+  const colors = {
+    background: theme.background,
+    text: theme.text,
+    tint: theme.tint,
+    icon: theme.icon,
+    accent: '#3B82F6',
+    accentText: 'white',
+    secondaryText: colorScheme === 'light' ? '#6B7280' : '#9CA3AF',
+    mutedText: colorScheme === 'light' ? '#9CA3AF' : '#6B7280',
+    lightBg: colorScheme === 'light' ? '#F9FAFB' : '#1F2937',
+    veryLightBg: colorScheme === 'light' ? '#F3F4F6' : '#374151',
+    border: colorScheme === 'light' ? '#E5E7EB' : '#4B5563',
+    blueBg: colorScheme === 'light' ? '#EFF6FF' : '#1E40AF',
+    greenBg: colorScheme === 'light' ? '#F0FDF4' : '#064E3B',
+    redBg: colorScheme === 'light' ? '#FEF2F2' : '#7F1D1D',
+    yellowBg: colorScheme === 'light' ? '#FEF3C7' : '#713F12',
+    success: '#10B981',
+    error: '#EF4444',
+    warning: '#F59E0B',
+    info: '#3B82F6',
+    successBg: colorScheme === 'light' ? '#D1FAE5' : '#064E3B',
+    errorBg: colorScheme === 'light' ? '#FEE2E2' : '#7F1D1D',
+    warningBg: colorScheme === 'light' ? '#FEF3C7' : '#713F12',
+    infoBg: colorScheme === 'light' ? '#DBEAFE' : '#1E3A8A',
+  };
 
   // Очищаем ошибки при входе на экран
   useEffect(() => {
-    clearSessionError();
-  }, []);
+    clearError();
+  }, [clearError]);
 
   // Проверка требований пароля
   const passwordRequirements = {
@@ -101,16 +131,11 @@ export default function RegisterScreen() {
       });
       router.replace('/');
     } catch (error: any) {
+      console.log('Register screen error:', error.message);
       if (error.message === 'SESSION_EXPIRED' || error.message.includes('Сессия')) {
         Alert.alert(
           'Ошибка сессии',
           'Произошла ошибка при регистрации. Пожалуйста, попробуйте снова.',
-          [
-            {
-              text: 'OK',
-              onPress: () => resetSession(),
-            },
-          ]
         );
       } else {
         Alert.alert('Ошибка', error.message || 'Не удалось создать аккаунт. Попробуйте ещё раз.');
@@ -118,27 +143,222 @@ export default function RegisterScreen() {
     }
   };
 
-  // Если есть ошибка сессии, показываем специальный экран
-  if (hasSessionError) {
-    return (
-      <View style={styles.sessionErrorContainer}>
-        <AlertCircle size={64} color="#EF4444" />
-        <Text style={styles.sessionErrorTitle}>Ошибка сессии</Text>
-        <Text style={styles.sessionErrorText}>
-          Произошла ошибка сессии. Пожалуйста, попробуйте снова.
-        </Text>
-        <TouchableOpacity
-          style={styles.sessionErrorButton}
-          onPress={() => {
-            resetSession();
-            router.back();
-          }}
-        >
-          <Text style={styles.sessionErrorButtonText}>Назад</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    content: {
+      flex: 1,
+      padding: 24,
+      justifyContent: 'center',
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: 32,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: colors.secondaryText,
+      textAlign: 'center',
+      lineHeight: 24,
+    },
+    form: {
+      gap: 16,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.veryLightBg,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 12,
+    },
+    input: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.text,
+    },
+    genderSection: {
+      marginBottom: 16,
+    },
+    genderLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    genderButtons: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    genderButton: {
+      flex: 1,
+      padding: 16,
+      borderRadius: 12,
+      backgroundColor: colors.veryLightBg,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    genderButtonActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    genderButtonText: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.secondaryText,
+    },
+    genderButtonTextActive: {
+      color: colors.accentText,
+    },
+    dateSection: {
+      marginBottom: 16,
+    },
+    dateLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    dateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: colors.veryLightBg,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 8,
+    },
+    dateText: {
+      fontSize: 16,
+      color: colors.text,
+      flex: 1,
+    },
+    ageText: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      textAlign: 'center',
+    },
+    requirements: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 12,
+      padding: 16,
+      marginVertical: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    requirementsTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    requirementRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+      gap: 8,
+    },
+    requirementText: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    requirementMet: {
+      color: colors.success,
+      fontWeight: '500',
+    },
+    registerButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.accent,
+      padding: 18,
+      borderRadius: 12,
+      gap: 12,
+      marginTop: 8,
+    },
+    registerButtonDisabled: {
+      backgroundColor: colors.mutedText,
+      opacity: 0.7,
+    },
+    registerButtonText: {
+      color: colors.accentText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    divider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    dividerText: {
+      paddingHorizontal: 16,
+      color: colors.mutedText,
+      fontSize: 14,
+    },
+    loginButton: {
+      padding: 18,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.accent,
+      alignItems: 'center',
+    },
+    loginButtonText: {
+      color: colors.accent,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    footer: {
+      marginTop: 32,
+      padding: 16,
+      backgroundColor: colors.lightBg,
+      borderRadius: 8,
+    },
+    footerText: {
+      textAlign: 'center',
+      color: colors.secondaryText,
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    footerLink: {
+      color: colors.accent,
+      fontWeight: '500',
+    },
+    errorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.errorBg,
+      borderColor: colors.errorBg,
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+      gap: 8,
+    },
+    errorText: {
+      flex: 1,
+      color: colors.error,
+      fontSize: 14,
+    },
+  });
 
   return (
     <KeyboardAvoidingView
@@ -151,33 +371,30 @@ export default function RegisterScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <UserPlus size={48} color="#3B82F6" />
+            <UserPlus size={48} color={colors.accent} />
             <Text style={styles.title}>Создать аккаунт</Text>
             <Text style={styles.subtitle}>
               Присоединяйтесь к сообществу МетаБаланс
             </Text>
           </View>
 
-          {sessionError && !hasSessionError && (
+          {error && (
             <View style={styles.errorContainer}>
-              <AlertCircle size={20} color="#EF4444" />
-              <Text style={styles.errorText}>{sessionError}</Text>
-              <TouchableOpacity onPress={clearSessionError}>
-                <Text style={styles.errorClose}>✕</Text>
-              </TouchableOpacity>
+              <AlertCircle size={20} color={colors.error} />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
           <View style={styles.form}>
             {/* Поле имени */}
             <View style={styles.inputContainer}>
-              <User size={20} color="#9CA3AF" />
+              <User size={20} color={colors.mutedText} />
               <TextInput
                 style={styles.input}
                 placeholder="Имя"
                 value={name}
                 onChangeText={setName}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.mutedText}
                 editable={!isLoading}
                 autoCapitalize="words"
               />
@@ -185,7 +402,7 @@ export default function RegisterScreen() {
 
             {/* Поле email */}
             <View style={styles.inputContainer}>
-              <Mail size={20} color="#9CA3AF" />
+              <Mail size={20} color={colors.mutedText} />
               <TextInput
                 style={styles.input}
                 placeholder="Email"
@@ -193,7 +410,7 @@ export default function RegisterScreen() {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.mutedText}
                 editable={!isLoading}
                 autoComplete="email"
               />
@@ -232,7 +449,7 @@ export default function RegisterScreen() {
                 onPress={() => setShowDatePicker(true)}
                 disabled={isLoading}
               >
-                <Calendar size={20} color="#6B7280" />
+                <Calendar size={20} color={colors.secondaryText} />
                 <Text style={styles.dateText}>
                   {birthDate.toLocaleDateString('ru-RU', {
                     day: 'numeric',
@@ -240,7 +457,7 @@ export default function RegisterScreen() {
                     year: 'numeric',
                   })}
                 </Text>
-                <ChevronDown size={20} color="#9CA3AF" />
+                <ChevronDown size={20} color={colors.mutedText} />
               </TouchableOpacity>
               <Text style={styles.ageText}>Возраст: {age} лет</Text>
               {showDatePicker && (
@@ -262,14 +479,14 @@ export default function RegisterScreen() {
 
             {/* Поле пароля */}
             <View style={styles.inputContainer}>
-              <Lock size={20} color="#9CA3AF" />
+              <Lock size={20} color={colors.mutedText} />
               <TextInput
                 style={styles.input}
                 placeholder="Пароль"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.mutedText}
                 editable={!isLoading}
                 autoComplete="new-password"
               />
@@ -278,23 +495,23 @@ export default function RegisterScreen() {
                 disabled={isLoading}
               >
                 {showPassword ? (
-                  <EyeOff size={20} color="#9CA3AF" />
+                  <EyeOff size={20} color={colors.mutedText} />
                 ) : (
-                  <Eye size={20} color="#9CA3AF" />
+                  <Eye size={20} color={colors.mutedText} />
                 )}
               </TouchableOpacity>
             </View>
 
             {/* Поле подтверждения пароля */}
             <View style={styles.inputContainer}>
-              <Lock size={20} color="#9CA3AF" />
+              <Lock size={20} color={colors.mutedText} />
               <TextInput
                 style={styles.input}
                 placeholder="Подтвердите пароль"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showConfirmPassword}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.mutedText}
                 editable={!isLoading}
                 autoComplete="new-password"
               />
@@ -303,9 +520,9 @@ export default function RegisterScreen() {
                 disabled={isLoading}
               >
                 {showConfirmPassword ? (
-                  <EyeOff size={20} color="#9CA3AF" />
+                  <EyeOff size={20} color={colors.mutedText} />
                 ) : (
-                  <Eye size={20} color="#9CA3AF" />
+                  <Eye size={20} color={colors.mutedText} />
                 )}
               </TouchableOpacity>
             </View>
@@ -316,9 +533,9 @@ export default function RegisterScreen() {
               
               <View style={styles.requirementRow}>
                 {passwordRequirements.minLength ? (
-                  <Check size={16} color="#10B981" />
+                  <Check size={16} color={colors.success} />
                 ) : (
-                  <X size={16} color="#EF4444" />
+                  <X size={16} color={colors.error} />
                 )}
                 <Text style={[
                   styles.requirementText,
@@ -330,9 +547,9 @@ export default function RegisterScreen() {
               
               <View style={styles.requirementRow}>
                 {passwordRequirements.hasUpperCase ? (
-                  <Check size={16} color="#10B981" />
+                  <Check size={16} color={colors.success} />
                 ) : (
-                  <X size={16} color="#EF4444" />
+                  <X size={16} color={colors.error} />
                 )}
                 <Text style={[
                   styles.requirementText,
@@ -344,9 +561,9 @@ export default function RegisterScreen() {
               
               <View style={styles.requirementRow}>
                 {passwordRequirements.hasLowerCase ? (
-                  <Check size={16} color="#10B981" />
+                  <Check size={16} color={colors.success} />
                 ) : (
-                  <X size={16} color="#EF4444" />
+                  <X size={16} color={colors.error} />
                 )}
                 <Text style={[
                   styles.requirementText,
@@ -358,9 +575,9 @@ export default function RegisterScreen() {
               
               <View style={styles.requirementRow}>
                 {passwordRequirements.hasNumber ? (
-                  <Check size={16} color="#10B981" />
+                  <Check size={16} color={colors.success} />
                 ) : (
-                  <X size={16} color="#EF4444" />
+                  <X size={16} color={colors.error} />
                 )}
                 <Text style={[
                   styles.requirementText,
@@ -372,9 +589,9 @@ export default function RegisterScreen() {
               
               <View style={styles.requirementRow}>
                 {passwordRequirements.passwordsMatch ? (
-                  <Check size={16} color="#10B981" />
+                  <Check size={16} color={colors.success} />
                 ) : (
-                  <X size={16} color="#EF4444" />
+                  <X size={16} color={colors.error} />
                 )}
                 <Text style={[
                   styles.requirementText,
@@ -394,7 +611,7 @@ export default function RegisterScreen() {
               onPress={handleRegister}
               disabled={!allRequirementsMet || isLoading}
             >
-              <UserPlus size={20} color="white" />
+              <UserPlus size={20} color={colors.accentText} />
               <Text style={styles.registerButtonText}>
                 {isLoading ? 'Регистрация...' : 'Зарегистрироваться'}
               </Text>
@@ -420,7 +637,7 @@ export default function RegisterScreen() {
           {/* Футер с информацией */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Нажимая "Зарегистрироваться", вы соглашаетесь с 
+              Нажимая &quot;Зарегистрироваться&quot;, вы соглашаетесь с 
               <Text style={styles.footerLink}> условиями использования </Text>
               и
               <Text style={styles.footerLink}> политикой конфиденциальности</Text>
@@ -431,259 +648,3 @@ export default function RegisterScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  sessionErrorContainer: {
-    flex: 1,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  sessionErrorTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  sessionErrorText: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  sessionErrorButton: {
-    padding: 18,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-    alignItems: 'center',
-    minWidth: 120,
-  },
-  sessionErrorButtonText: {
-    color: '#3B82F6',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    gap: 8,
-  },
-  errorText: {
-    flex: 1,
-    color: '#DC2626',
-    fontSize: 14,
-  },
-  errorClose: {
-    color: '#DC2626',
-    fontSize: 16,
-    paddingHorizontal: 4,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  form: {
-    gap: 16,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#111827',
-  },
-  genderSection: {
-    marginBottom: 16,
-  },
-  genderLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  genderButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  genderButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  genderButtonActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  genderButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  genderButtonTextActive: {
-    color: 'white',
-  },
-  dateSection: {
-    marginBottom: 16,
-  },
-  dateLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#111827',
-    flex: 1,
-  },
-  ageText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  requirements: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  requirementsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  requirementRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  requirementText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  requirementMet: {
-    color: '#10B981',
-    fontWeight: '500',
-  },
-  registerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3B82F6',
-    padding: 18,
-    borderRadius: 12,
-    gap: 12,
-    marginTop: 8,
-  },
-  registerButtonDisabled: {
-    backgroundColor: '#9CA3AF',
-    opacity: 0.7,
-  },
-  registerButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    color: '#9CA3AF',
-    fontSize: 14,
-  },
-  loginButton: {
-    padding: 18,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-    alignItems: 'center',
-  },
-  loginButtonText: {
-    color: '#3B82F6',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    marginTop: 32,
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-  },
-  footerText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  footerLink: {
-    color: '#3B82F6',
-    fontWeight: '500',
-  },
-});

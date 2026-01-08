@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useColorScheme as useRNColorScheme } from 'react-native';
+import { useContext, useEffect, useState } from 'react';
+import { ThemeContext } from '@/contexts/ThemeContext';
 
-/**
- * To support static rendering, this value needs to be re-calculated on the client side for web
- */
 export function useColorScheme() {
   const [hasHydrated, setHasHydrated] = useState(false);
 
@@ -11,7 +8,7 @@ export function useColorScheme() {
     setHasHydrated(true);
   }, []);
 
-  const colorScheme = useRNColorScheme();
+  const { colorScheme } = useContext(ThemeContext);
 
   if (hasHydrated) {
     return colorScheme;

@@ -13,10 +13,9 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  Dimensions
 } from 'react-native';
 import { 
   History, 
@@ -48,6 +47,10 @@ import {
 import { Link } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/api/client';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 type Calculation = {
   id: string;
@@ -96,6 +99,8 @@ type FilterType = 'all' | 'week' | 'month' | 'custom';
 
 export default function HistoryScreen() {
   const { isAuthenticated } = useAuth();
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
   const [calculations, setCalculations] = useState<Calculation[]>([]);
   const [stats, setStats] = useState<HistoryStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,6 +109,32 @@ export default function HistoryScreen() {
   const [filter, setFilter] = useState<FilterType>('all');
   const [customDays, setCustomDays] = useState<string>('7');
   const [showCustomModal, setShowCustomModal] = useState(false);
+
+  const colors = {
+    background: theme.background,
+    text: theme.text,
+    tint: theme.tint,
+    icon: theme.icon,
+    accent: '#3B82F6',
+    accentText: 'white',
+    secondaryText: colorScheme === 'light' ? '#6B7280' : '#9CA3AF',
+    mutedText: colorScheme === 'light' ? '#9CA3AF' : '#6B7280',
+    lightBg: colorScheme === 'light' ? '#F9FAFB' : '#1F2937',
+    veryLightBg: colorScheme === 'light' ? '#F3F4F6' : '#374151',
+    border: colorScheme === 'light' ? '#E5E7EB' : '#4B5563',
+    blueBg: colorScheme === 'light' ? '#EFF6FF' : '#1E40AF',
+    greenBg: colorScheme === 'light' ? '#F0FDF4' : '#064E3B',
+    redBg: colorScheme === 'light' ? '#FEF2F2' : '#7F1D1D',
+    yellowBg: colorScheme === 'light' ? '#FEF3C7' : '#713F12',
+    success: '#10B981',
+    error: '#EF4444',
+    warning: '#F59E0B',
+    info: '#3B82F6',
+    successBg: colorScheme === 'light' ? '#D1FAE5' : '#064E3B',
+    errorBg: colorScheme === 'light' ? '#FEE2E2' : '#7F1D1D',
+    warningBg: colorScheme === 'light' ? '#FEF3C7' : '#713F12',
+    infoBg: colorScheme === 'light' ? '#DBEAFE' : '#1E3A8A',
+  };
 
   // Форматирование даты
   const formatDate = (dateString: string): string => {
@@ -242,20 +273,20 @@ export default function HistoryScreen() {
   // Получение иконки цели
   const getGoalIcon = (goalId: number) => {
     switch (goalId) {
-      case 1: return <TrendingDown size={16} color="#EF4444" />;
-      case 2: return <Minus size={16} color="#3B82F6" />;
-      case 3: return <TrendingUp size={16} color="#10B981" />;
-      default: return <Target size={16} color="#6B7280" />;
+      case 1: return <TrendingDown size={16} color={colors.error} />;
+      case 2: return <Minus size={16} color={colors.accent} />;
+      case 3: return <TrendingUp size={16} color={colors.success} />;
+      default: return <Target size={16} color={colors.secondaryText} />;
     }
   };
 
   // Получение цвета цели
   const getGoalColor = (goalId: number): string => {
     switch (goalId) {
-      case 1: return '#EF4444';
-      case 2: return '#3B82F6';
-      case 3: return '#10B981';
-      default: return '#6B7280';
+      case 1: return colors.error;
+      case 2: return colors.accent;
+      case 3: return colors.success;
+      default: return colors.secondaryText;
     }
   };
 
@@ -334,6 +365,537 @@ export default function HistoryScreen() {
     }
   };
 
+  const styles = StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+      padding: 16,
+      backgroundColor: colors.background,
+    },
+    scrollContainer: {
+      flexGrow: 1,
+    },
+    header: {
+      marginBottom: 24,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      marginBottom: 8,
+    },
+    headerTitle: {
+      flex: 1,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    lockContainer: {
+      alignItems: 'center',
+      padding: 32,
+      marginBottom: 24,
+      backgroundColor: colors.lightBg,
+      borderRadius: 16,
+    },
+    lockIconContainer: {
+      position: 'relative',
+      marginBottom: 20,
+    },
+    lockBadge: {
+      position: 'absolute',
+      top: -5,
+      right: -5,
+      backgroundColor: colors.error,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    lockBadgeText: {
+      color: colors.accentText,
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    lockTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    lockDescription: {
+      textAlign: 'center',
+      color: colors.secondaryText,
+      marginBottom: 32,
+      fontSize: 16,
+      lineHeight: 24,
+    },
+    authButtons: {
+      width: '100%',
+      gap: 12,
+    },
+    loginButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.accent,
+      paddingHorizontal: 24,
+      paddingVertical: 16,
+      borderRadius: 12,
+      gap: 12,
+      justifyContent: 'center',
+    },
+    loginButtonText: {
+      color: colors.accentText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    registerButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.veryLightBg,
+      paddingHorizontal: 24,
+      paddingVertical: 16,
+      borderRadius: 12,
+      gap: 12,
+      justifyContent: 'center',
+    },
+    registerButtonText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    filtersContainer: {
+      marginBottom: 24,
+    },
+    filtersTitle: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    filters: {
+      flexDirection: 'row',
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    filterButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: colors.veryLightBg,
+      minWidth: 80,
+    },
+    filterButtonActive: {
+      backgroundColor: colors.accent,
+    },
+    filterText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.secondaryText,
+      textAlign: 'center',
+    },
+    filterTextActive: {
+      color: colors.accentText,
+    },
+    customFilterContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 48,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: 16,
+      color: colors.secondaryText,
+    },
+    errorContainer: {
+      backgroundColor: colors.errorBg,
+      borderRadius: 16,
+      padding: 24,
+      alignItems: 'center',
+    },
+    errorText: {
+      fontSize: 16,
+      color: colors.error,
+      textAlign: 'center',
+      marginBottom: 16,
+      lineHeight: 22,
+    },
+    errorActions: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    retryButton: {
+      backgroundColor: colors.accent,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      color: colors.accentText,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    detailsButton: {
+      backgroundColor: colors.veryLightBg,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    detailsButtonText: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      padding: 48,
+      backgroundColor: colors.lightBg,
+      borderRadius: 16,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.text,
+      marginTop: 24,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    emptyDescription: {
+      textAlign: 'center',
+      color: colors.secondaryText,
+      fontSize: 16,
+      marginBottom: 8,
+      lineHeight: 24,
+    },
+    emptyHint: {
+      textAlign: 'center',
+      color: colors.mutedText,
+      fontSize: 14,
+      fontStyle: 'italic',
+      marginBottom: 20,
+    },
+    changeFilterButton: {
+      backgroundColor: colors.accent,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    changeFilterButtonText: {
+      color: colors.accentText,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 16,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.lightBg,
+      borderRadius: 16,
+      padding: 16,
+    },
+    statHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+    },
+    statTitle: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.secondaryText,
+    },
+    statValue: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 2,
+    },
+    statValueUp: {
+      color: colors.error,
+    },
+    statValueDown: {
+      color: colors.success,
+    },
+    statRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    statUnit: {
+      fontSize: 12,
+      color: colors.secondaryText,
+    },
+    calculationsList: {
+      marginBottom: 24,
+    },
+    listHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    listTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    listCount: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      backgroundColor: colors.veryLightBg,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    calculationCard: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 16,
+    },
+    cardDate: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
+    },
+    cardDateText: {
+      fontSize: 12,
+      color: colors.secondaryText,
+      flex: 1,
+    },
+    goalBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 12,
+    },
+    goalBadgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    cardContent: {
+      marginBottom: 16,
+    },
+    metricsRow: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+    },
+    metricItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    metricLabel: {
+      fontSize: 12,
+      color: colors.secondaryText,
+      marginBottom: 4,
+    },
+    metricValue: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    metricDivider: {
+      width: 1,
+      backgroundColor: colors.border,
+    },
+    inputData: {
+      gap: 12,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      gap: 16,
+    },
+    inputItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    inputText: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    cardInfo: {
+      fontSize: 12,
+      color: colors.secondaryText,
+      fontStyle: 'italic',
+    },
+    syncInfo: {
+      backgroundColor: colors.greenBg,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 32,
+    },
+    syncInfoText: {
+      fontSize: 14,
+      color: colors.success,
+      fontWeight: '500',
+      marginBottom: 4,
+    },
+    syncInfoSubtext: {
+      fontSize: 12,
+      color: colors.secondaryText,
+    },
+    // Модальное окно стили
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderRadius: 20,
+      width: '100%',
+      maxWidth: 400,
+      padding: 24,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 24,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    closeButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.veryLightBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalBody: {
+      marginBottom: 24,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 20,
+    },
+    inputLabel: {
+      fontSize: 16,
+      color: colors.text,
+      flex: 1,
+    },
+    textInput: {
+      backgroundColor: colors.lightBg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.text,
+      width: 80,
+      textAlign: 'center',
+    },
+    presetButtons: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 16,
+    },
+    presetButton: {
+      backgroundColor: colors.veryLightBg,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      minWidth: 60,
+    },
+    presetButtonText: {
+      fontSize: 14,
+      color: colors.text,
+      textAlign: 'center',
+    },
+    modalHint: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      textAlign: 'center',
+      fontStyle: 'italic',
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 12,
+    },
+    cancelButton: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: colors.veryLightBg,
+    },
+    cancelButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    applyButton: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: colors.accent,
+    },
+    applyButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.accentText,
+    },
+  });
+
   // Экраны для неавторизованных пользователей
   if (!isAuthenticated) {
     return (
@@ -345,7 +907,7 @@ export default function HistoryScreen() {
         >
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <History size={28} color="#3B82F6" />
+              <History size={28} color={colors.accent} />
               <Text style={styles.title}>История расчетов</Text>
             </View>
             <Text style={styles.subtitle}>
@@ -355,7 +917,7 @@ export default function HistoryScreen() {
 
           <View style={styles.lockContainer}>
             <View style={styles.lockIconContainer}>
-              <Lock size={64} color="#9CA3AF" />
+              <Lock size={64} color={colors.mutedText} />
               <View style={styles.lockBadge}>
                 <Text style={styles.lockBadgeText}>!</Text>
               </View>
@@ -370,14 +932,14 @@ export default function HistoryScreen() {
             <View style={styles.authButtons}>
               <Link href="/auth/login" asChild>
                 <TouchableOpacity style={styles.loginButton}>
-                  <ArrowRight size={20} color="white" />
+                  <ArrowRight size={20} color={colors.accentText} />
                   <Text style={styles.loginButtonText}>Войти в аккаунт</Text>
                 </TouchableOpacity>
               </Link>
               
               <Link href="/auth/register" asChild>
                 <TouchableOpacity style={styles.registerButton}>
-                  <UserPlus size={20} color="#3B82F6" />
+                  <UserPlus size={20} color={colors.accent} />
                   <Text style={styles.registerButtonText}>Зарегистрироваться</Text>
                 </TouchableOpacity>
               </Link>
@@ -401,7 +963,7 @@ export default function HistoryScreen() {
         >
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <History size={28} color="#3B82F6" />
+              <History size={28} color={colors.accent} />
               <View style={styles.headerTitle}>
                 <Text style={styles.title}>История расчетов</Text>
                 <Text style={styles.subtitle}>
@@ -449,11 +1011,11 @@ export default function HistoryScreen() {
                 onPress={() => setShowCustomModal(true)}
               >
                 <View style={styles.customFilterContent}>
-                  <Filter size={14} color={filter === 'custom' ? "white" : "#6B7280"} />
+                  <Filter size={14} color={filter === 'custom' ? colors.accentText : colors.secondaryText} />
                   <Text style={[styles.filterText, filter === 'custom' && styles.filterTextActive]}>
                     {filter === 'custom' ? `${customDays} д.` : 'Свой'}
                   </Text>
-                  <ChevronDown size={12} color={filter === 'custom' ? "white" : "#6B7280"} />
+                  <ChevronDown size={12} color={filter === 'custom' ? colors.accentText : colors.secondaryText} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -461,7 +1023,7 @@ export default function HistoryScreen() {
 
           {loading && !refreshing ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#3B82F6" />
+              <ActivityIndicator size="large" color={colors.accent} />
               <Text style={styles.loadingText}>Загрузка истории...</Text>
             </View>
           ) : error ? (
@@ -481,7 +1043,7 @@ export default function HistoryScreen() {
             </View>
           ) : calculations.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Calculator size={64} color="#9CA3AF" />
+              <Calculator size={64} color={colors.mutedText} />
               <Text style={styles.emptyTitle}>
                 {filter === 'all' ? 'История расчетов пуста' : 'Нет расчетов за выбранный период'}
               </Text>
@@ -508,7 +1070,7 @@ export default function HistoryScreen() {
               <View style={styles.statsContainer}>
                 <View style={styles.statCard}>
                   <View style={styles.statHeader}>
-                    <Flame size={20} color="#F59E0B" />
+                    <Flame size={20} color={colors.warning} />
                     <Text style={styles.statTitle}>Средний TDEE</Text>
                   </View>
                   <Text style={styles.statValue}>{calculateAverageTDEE()}</Text>
@@ -517,7 +1079,7 @@ export default function HistoryScreen() {
                 
                 <View style={styles.statCard}>
                   <View style={styles.statHeader}>
-                    <Scale size={20} color="#10B981" />
+                    <Scale size={20} color={colors.success} />
                     <Text style={styles.statTitle}>Изменение веса</Text>
                   </View>
                   {(() => {
@@ -532,9 +1094,9 @@ export default function HistoryScreen() {
                           ]}>
                             {progress.change > 0 ? '+' : ''}{progress.change.toFixed(1)}
                           </Text>
-                          {progress.direction === 'up' && <ArrowUpRight size={16} color="#EF4444" />}
-                          {progress.direction === 'down' && <ArrowDownRight size={16} color="#10B981" />}
-                          {progress.direction === 'same' && <Minus size={16} color="#6B7280" />}
+                          {progress.direction === 'up' && <ArrowUpRight size={16} color={colors.error} />}
+                          {progress.direction === 'down' && <ArrowDownRight size={16} color={colors.success} />}
+                          {progress.direction === 'same' && <Minus size={16} color={colors.secondaryText} />}
                         </View>
                         <Text style={styles.statUnit}>кг</Text>
                       </>
@@ -544,7 +1106,7 @@ export default function HistoryScreen() {
                 
                 <View style={styles.statCard}>
                   <View style={styles.statHeader}>
-                    <Target size={20} color="#3B82F6" />
+                    <Target size={20} color={colors.accent} />
                     <Text style={styles.statTitle}>Расчетов</Text>
                   </View>
                   <Text style={styles.statValue}>{calculations.length}</Text>
@@ -567,7 +1129,7 @@ export default function HistoryScreen() {
                   >
                     <View style={styles.cardHeader}>
                       <View style={styles.cardDate}>
-                        <Clock size={14} color="#6B7280" />
+                        <Clock size={14} color={colors.secondaryText} />
                         <Text style={styles.cardDateText}>
                           {formatDate(calculation.created_at)}
                         </Text>
@@ -615,19 +1177,19 @@ export default function HistoryScreen() {
                       <View style={styles.inputData}>
                         <View style={styles.inputRow}>
                           <View style={styles.inputItem}>
-                            <Scale size={14} color="#6B7280" />
+                            <Scale size={14} color={colors.secondaryText} />
                             <Text style={styles.inputText}>
                               {calculation.input_data.weight} кг
                             </Text>
                           </View>
                           <View style={styles.inputItem}>
-                            <Ruler size={14} color="#6B7280" />
+                            <Ruler size={14} color={colors.secondaryText} />
                             <Text style={styles.inputText}>
                               {calculation.input_data.height} см
                             </Text>
                           </View>
                           <View style={styles.inputItem}>
-                            <User size={14} color="#6B7280" />
+                            <User size={14} color={colors.secondaryText} />
                             <Text style={styles.inputText}>
                               {calculation.input_data.age} лет
                             </Text>
@@ -635,7 +1197,7 @@ export default function HistoryScreen() {
                         </View>
                         <View style={styles.inputRow}>
                           <View style={styles.inputItem}>
-                            <ActivityIcon size={14} color="#6B7280" />
+                            <ActivityIcon size={14} color={colors.secondaryText} />
                             <Text style={styles.inputText}>
                               {getActivityLevelName(calculation.input_data.activity_level)}
                             </Text>
@@ -653,7 +1215,7 @@ export default function HistoryScreen() {
                       <Text style={styles.cardInfo}>
                         Коэффициент активности: {calculation.results.coefficient}
                       </Text>
-                      <ChevronRight size={16} color="#9CA3AF" />
+                      <ChevronRight size={16} color={colors.mutedText} />
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -683,23 +1245,20 @@ export default function HistoryScreen() {
         <TouchableWithoutFeedback onPress={() => setShowCustomModal(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-              <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.modalContent}
-              >
+              <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Настройка периода</Text>
                   <TouchableOpacity 
                     onPress={() => setShowCustomModal(false)}
                     style={styles.closeButton}
                   >
-                    <X size={24} color="#6B7280" />
+                    <X size={24} color={colors.secondaryText} />
                   </TouchableOpacity>
                 </View>
                 
                 <View style={styles.modalBody}>
                   <View style={styles.inputContainer}>
-                    <CalendarDays size={20} color="#3B82F6" />
+                    <CalendarDays size={20} color={colors.accent} />
                     <Text style={styles.inputLabel}>Количество дней:</Text>
                     <TextInput
                       style={styles.textInput}
@@ -744,7 +1303,7 @@ export default function HistoryScreen() {
                     <Text style={styles.applyButtonText}>Применить</Text>
                   </TouchableOpacity>
                 </View>
-              </KeyboardAvoidingView>
+              </View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
@@ -752,534 +1311,3 @@ export default function HistoryScreen() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 8,
-  },
-  headerTitle: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  lockContainer: {
-    alignItems: 'center',
-    padding: 32,
-    marginBottom: 24,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-  },
-  lockIconContainer: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  lockBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#EF4444',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lockBadgeText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  lockTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  lockDescription: {
-    textAlign: 'center',
-    color: '#6B7280',
-    marginBottom: 32,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  authButtons: {
-    width: '100%',
-    gap: 12,
-  },
-  loginButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 12,
-    justifyContent: 'center',
-  },
-  loginButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  registerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 12,
-    justifyContent: 'center',
-  },
-  registerButtonText: {
-    color: '#374151',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  filtersContainer: {
-    marginBottom: 24,
-  },
-  filtersTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  filters: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    minWidth: 80,
-  },
-  filterButtonActive: {
-    backgroundColor: '#3B82F6',
-  },
-  filterText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  filterTextActive: {
-    color: 'white',
-  },
-  customFilterContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 48,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#DC2626',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 22,
-  },
-  errorActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  retryButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  detailsButton: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  detailsButtonText: {
-    color: '#374151',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    padding: 48,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-    marginTop: 24,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    textAlign: 'center',
-    color: '#6B7280',
-    fontSize: 16,
-    marginBottom: 8,
-    lineHeight: 24,
-  },
-  emptyHint: {
-    textAlign: 'center',
-    color: '#9CA3AF',
-    fontSize: 14,
-    fontStyle: 'italic',
-    marginBottom: 20,
-  },
-  changeFilterButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  changeFilterButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 16,
-  },
-  statHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  statTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  statValueUp: {
-    color: '#EF4444',
-  },
-  statValueDown: {
-    color: '#10B981',
-  },
-  statRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statUnit: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  calculationsList: {
-    marginBottom: 24,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  listTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  listCount: {
-    fontSize: 14,
-    color: '#6B7280',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  calculationCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  cardDate: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  cardDateText: {
-    fontSize: 12,
-    color: '#6B7280',
-    flex: 1,
-  },
-  goalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  goalBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  cardContent: {
-    marginBottom: 16,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  metricItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  metricLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  metricValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  metricDivider: {
-    width: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  inputData: {
-    gap: 12,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  inputItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  inputText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  cardInfo: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontStyle: 'italic',
-  },
-  syncInfo: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 32,
-  },
-  syncInfoText: {
-    fontSize: 14,
-    color: '#065F46',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  syncInfoSubtext: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  // Модальное окно стили
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 400,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalBody: {
-    marginBottom: 24,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    color: '#374151',
-    flex: 1,
-  },
-  textInput: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#111827',
-    width: 80,
-    textAlign: 'center',
-  },
-  presetButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  presetButton: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    minWidth: 60,
-  },
-  presetButtonText: {
-    fontSize: 14,
-    color: '#374151',
-    textAlign: 'center',
-  },
-  modalHint: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  cancelButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  applyButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#3B82F6',
-  },
-  applyButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'white',
-  },
-});

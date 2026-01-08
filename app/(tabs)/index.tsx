@@ -35,9 +35,13 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/api/client';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
 
 export default function CalculatorScreen() {
   const { isAuthenticated, user, updateProfile, isSyncing } = useAuth();
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [age, setAge] = useState('');
@@ -59,7 +63,33 @@ export default function CalculatorScreen() {
   } | null>(null);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
-  
+
+  const colors = {
+    background: theme.background,
+    text: theme.text,
+    tint: theme.tint,
+    icon: theme.icon,
+    accent: '#3B82F6',
+    accentText: 'white',
+    secondaryText: colorScheme === 'light' ? '#6B7280' : '#9CA3AF',
+    mutedText: colorScheme === 'light' ? '#9CA3AF' : '#6B7280',
+    lightBg: colorScheme === 'light' ? '#F9FAFB' : '#1F2937',
+    veryLightBg: colorScheme === 'light' ? '#F3F4F6' : '#374151',
+    border: colorScheme === 'light' ? '#E5E7EB' : '#4B5563',
+    blueBg: colorScheme === 'light' ? '#EFF6FF' : '#1E40AF',
+    greenBg: colorScheme === 'light' ? '#F0FDF4' : '#064E3B',
+    redBg: colorScheme === 'light' ? '#FEF2F2' : '#7F1D1D',
+    yellowBg: colorScheme === 'light' ? '#FEF3C7' : '#713F12',
+    success: '#10B981',
+    error: '#EF4444',
+    warning: '#F59E0B',
+    info: '#3B82F6',
+    successBg: colorScheme === 'light' ? '#D1FAE5' : '#064E3B',
+    errorBg: colorScheme === 'light' ? '#FEE2E2' : '#7F1D1D',
+    warningBg: colorScheme === 'light' ? '#FEF3C7' : '#713F12',
+    infoBg: colorScheme === 'light' ? '#DBEAFE' : '#1E3A8A',
+  };
+
   const activityLevels = [
     { code: 'sedentary', name: 'Сидячий', coef: 1.2, desc: 'Мало или нет тренировок' },
     { code: 'light', name: 'Легкая', coef: 1.375, desc: '1-3 тренировки в неделю' },
@@ -348,17 +378,17 @@ export default function CalculatorScreen() {
 
   const getGoalIcon = () => {
     switch (goal) {
-      case 'loss': return <TrendingDown size={24} color="#10B981" />;
-      case 'gain': return <TrendingUp size={24} color="#F59E0B" />;
-      default: return <Minus size={24} color="#3B82F6" />;
+      case 'loss': return <TrendingDown size={24} color={colors.success} />;
+      case 'gain': return <TrendingUp size={24} color={colors.warning} />;
+      default: return <Minus size={24} color={colors.accent} />;
     }
   };
 
   const getGoalColor = () => {
     switch (goal) {
-      case 'loss': return '#10B981';
-      case 'gain': return '#F59E0B';
-      default: return '#3B82F6';
+      case 'loss': return colors.success;
+      case 'gain': return colors.warning;
+      default: return colors.accent;
     }
   };
 
@@ -389,6 +419,463 @@ export default function CalculatorScreen() {
     </View>
   );
 
+  const styles = StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+      padding: 16,
+      backgroundColor: colors.background,
+    },
+    header: {
+      marginBottom: 24,
+    },
+    appTitleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
+    },
+    appTitle: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    appSubtitle: {
+      fontSize: 16,
+      color: colors.secondaryText,
+    },
+    section: {
+      marginBottom: 28,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      flex: 1,
+    },
+    inputGroup: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 16,
+    },
+    inputWrapper: {
+      flex: 1,
+    },
+    inputLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    genderSelector: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    genderButton: {
+      flex: 1,
+      padding: 16,
+      borderRadius: 12,
+      backgroundColor: colors.lightBg,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    genderButtonActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    genderText: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.secondaryText,
+    },
+    genderTextActive: {
+      color: colors.accentText,
+    },
+    activityScroll: {
+      marginHorizontal: -16,
+      paddingHorizontal: 16,
+    },
+    activityCard: {
+      width: 120,
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: colors.lightBg,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      marginRight: 12,
+    },
+    activityCardActive: {
+      backgroundColor: colors.blueBg,
+      borderColor: colors.accent,
+    },
+    activityCardValue: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.secondaryText,
+      marginBottom: 4,
+    },
+    activityCardValueActive: {
+      color: colors.accent,
+    },
+    activityCardLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    activityCardDesc: {
+      fontSize: 12,
+      color: colors.secondaryText,
+      lineHeight: 16,
+    },
+    goalContainer: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    goalCard: {
+      flex: 1,
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: colors.lightBg,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      alignItems: 'center',
+    },
+    goalIcon: {
+      fontSize: 24,
+      marginBottom: 8,
+    },
+    goalCardLabel: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    goalCardSubtitle: {
+      fontSize: 12,
+      color: colors.secondaryText,
+      textAlign: 'center',
+    },
+    goalSelectedDot: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    saveSection: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    saveHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    saveIconContainer: {
+      flexDirection: 'row',
+      position: 'relative',
+    },
+    saveIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    saveTextContainer: {
+      flex: 1,
+    },
+    saveTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    saveDescription: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      lineHeight: 18,
+    },
+    saveDetails: {
+      marginTop: 16,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: 12,
+    },
+    saveDetailItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    saveDetailText: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    calculateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.accent,
+      padding: 20,
+      borderRadius: 16,
+      gap: 12,
+      marginBottom: 24,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    calculateButtonDisabled: {
+      backgroundColor: colors.mutedText,
+      shadowColor: colors.mutedText,
+    },
+    calculateButtonText: {
+      color: colors.accentText,
+      fontSize: 18,
+      fontWeight: '600',
+    },
+    registerPrompt: {
+      backgroundColor: colors.blueBg,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: colors.infoBg,
+    },
+    registerPromptContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    registerPromptText: {
+      flex: 1,
+    },
+    registerPromptTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.info,
+      marginBottom: 4,
+    },
+    registerPromptSubtitle: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    footer: {
+      paddingBottom: 32,
+    },
+    disclaimer: {
+      textAlign: 'center',
+      fontSize: 12,
+      color: colors.mutedText,
+      lineHeight: 18,
+    },
+    // Модальное окно стили
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderRadius: 20,
+      width: '100%',
+      maxHeight: '80%',
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.veryLightBg,
+    },
+    modalTitleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    goalSummary: {
+      alignItems: 'center',
+      padding: 20,
+      backgroundColor: colors.lightBg,
+      marginHorizontal: 20,
+      marginTop: 20,
+      borderRadius: 16,
+      gap: 8,
+    },
+    goalSummaryText: {
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    goalSummaryDescription: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    resultCard: {
+      backgroundColor: colors.background,
+      borderRadius: 16,
+      padding: 20,
+      marginHorizontal: 20,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.veryLightBg,
+      borderLeftWidth: 4,
+    },
+    resultCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 12,
+    },
+    resultIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    resultCardTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    resultCardValue: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    resultCardDescription: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      lineHeight: 20,
+    },
+    macrosContainer: {
+      marginHorizontal: 20,
+      marginTop: 24,
+    },
+    macrosTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 16,
+    },
+    macrosGrid: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    macroCard: {
+      flex: 1,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    macroLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      marginBottom: 8,
+    },
+    macroValue: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    macroPercentage: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    recommendations: {
+      marginHorizontal: 20,
+      marginTop: 24,
+      marginBottom: 20,
+    },
+    recommendationsTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    recommendationItem: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 8,
+    },
+    recommendationBullet: {
+      fontSize: 16,
+      color: colors.accent,
+    },
+    recommendationText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.secondaryText,
+      lineHeight: 20,
+    },
+    modalFooter: {
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.veryLightBg,
+    },
+    actionButton: {
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    actionButtonText: {
+      color: colors.accentText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView 
@@ -398,7 +885,7 @@ export default function CalculatorScreen() {
         {/* Приветствие и статус профиля */}
         <View style={styles.header}>   
           <View style={styles.appTitleContainer}>
-            <Flame size={28} color="#3B82F6" />
+            <Flame size={28} color={colors.accent} />
             <Text style={styles.appTitle}>МетаБаланс</Text>
           </View>
           <Text style={styles.appSubtitle}>Калькулятор TDEE и калорий</Text>
@@ -407,7 +894,7 @@ export default function CalculatorScreen() {
         {/* Основные данные */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Scale size={22} color="#3B82F6" />
+            <Scale size={22} color={colors.accent} />
             <Text style={styles.sectionTitle}>Основные данные</Text>
           </View>
           
@@ -420,7 +907,7 @@ export default function CalculatorScreen() {
                 value={weight}
                 onChangeText={setWeight}
                 keyboardType="numeric"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.mutedText}
               />
             </View>
             
@@ -432,7 +919,7 @@ export default function CalculatorScreen() {
                 value={height}
                 onChangeText={setHeight}
                 keyboardType="numeric"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.mutedText}
               />
             </View>
             
@@ -444,7 +931,7 @@ export default function CalculatorScreen() {
                 value={age}
                 onChangeText={setAge}
                 keyboardType="numeric"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.mutedText}
               />
             </View>
           </View>
@@ -480,7 +967,7 @@ export default function CalculatorScreen() {
         {/* Уровень активности */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Activity size={22} color="#3B82F6" />
+            <Activity size={22} color={colors.accent} />
             <Text style={styles.sectionTitle}>Уровень активности</Text>
           </View>
           
@@ -514,15 +1001,15 @@ export default function CalculatorScreen() {
         {/* Цель */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Target size={22} color="#3B82F6" />
+            <Target size={22} color={colors.accent} />
             <Text style={styles.sectionTitle}>Ваша цель</Text>
           </View>
           
           <View style={styles.goalContainer}>
             {[
-              { label: 'Похудеть', value: 'loss', color: '#10B981', icon: '👇' },
-              { label: 'Поддерживать', value: 'maintain', color: '#3B82F6', icon: '⚖️' },
-              { label: 'Набрать', value: 'gain', color: '#F59E0B', icon: '👆' },
+              { label: 'Похудеть', value: 'loss', color: colors.success, icon: '👇' },
+              { label: 'Поддерживать', value: 'maintain', color: colors.accent, icon: '⚖️' },
+              { label: 'Набрать', value: 'gain', color: colors.warning, icon: '👆' },
             ].map((item) => (
               <TouchableOpacity
                 key={item.value}
@@ -552,21 +1039,21 @@ export default function CalculatorScreen() {
             <View style={styles.saveHeader}>
               <View style={styles.saveIconContainer}>
                 {saveSettings.saveToProfile && saveSettings.saveToHistory ? (
-                  <View style={[styles.saveIcon, { backgroundColor: '#EFF6FF' }]}>
-                    <Cloud size={20} color="#3B82F6" />
+                  <View style={[styles.saveIcon, { backgroundColor: colors.blueBg }]}>
+                    <Cloud size={20} color={colors.accent} />
                   </View>
                 ) : (
-                  <View style={[styles.saveIcon, { backgroundColor: '#F3F4F6' }]}>
-                    <Cloud size={20} color="#9CA3AF" />
+                  <View style={[styles.saveIcon, { backgroundColor: colors.veryLightBg }]}>
+                    <Cloud size={20} color={colors.mutedText} />
                   </View>
                 )}
                 {saveSettings.saveToProfile && saveSettings.saveToHistory ? (
-                  <View style={[styles.saveIcon, { backgroundColor: '#F0FDF4', marginLeft: -8 }]}>
-                    <History size={20} color="#10B981" />
+                  <View style={[styles.saveIcon, { backgroundColor: colors.greenBg, marginLeft: -8 }]}>
+                    <History size={20} color={colors.success} />
                   </View>
                 ) : (
-                  <View style={[styles.saveIcon, { backgroundColor: '#F3F4F6', marginLeft: -8 }]}>
-                    <History size={20} color="#9CA3AF" />
+                  <View style={[styles.saveIcon, { backgroundColor: colors.veryLightBg, marginLeft: -8 }]}>
+                    <History size={20} color={colors.mutedText} />
                   </View>
                 )}
               </View>
@@ -585,19 +1072,19 @@ export default function CalculatorScreen() {
               <Switch
                 value={saveSettings.saveToProfile && saveSettings.saveToHistory}
                 onValueChange={toggleSaveSettings}
-                trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
-                thumbColor="#FFFFFF"
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colors.background}
               />
             </View>
             
             {saveSettings.saveToProfile && saveSettings.saveToHistory && (
               <View style={styles.saveDetails}>
                 <View style={styles.saveDetailItem}>
-                  <Cloud size={16} color="#3B82F6" />
+                  <Cloud size={16} color={colors.accent} />
                   <Text style={styles.saveDetailText}>Данные сохраняются в профиль</Text>
                 </View>
                 <View style={styles.saveDetailItem}>
-                  <History size={16} color="#10B981" />
+                  <History size={16} color={colors.success} />
                   <Text style={styles.saveDetailText}>Расчет сохраняется в историю</Text>
                 </View>
               </View>
@@ -611,11 +1098,11 @@ export default function CalculatorScreen() {
           onPress={calculateTDEE}
           disabled={isCalculating || isSyncing}
         >
-          <Calculator size={24} color="white" />
+          <Calculator size={24} color={colors.accentText} />
           <Text style={styles.calculateButtonText}>
             {isCalculating ? 'Расчет...' : isSyncing ? 'Сохранение...' : 'Рассчитать TDEE'}
           </Text>
-          <ChevronRight size={20} color="white" />
+          <ChevronRight size={20} color={colors.accentText} />
         </TouchableOpacity>
 
         {/* Призыв к регистрации для неавторизованных */}
@@ -625,7 +1112,7 @@ export default function CalculatorScreen() {
             onPress={() => {}}
           >
             <View style={styles.registerPromptContent}>
-              <User size={20} color="#3B82F6" />
+              <User size={20} color={colors.accent} />
               <View style={styles.registerPromptText}>
                 <Text style={styles.registerPromptTitle}>
                   Зарегистрируйтесь для большего
@@ -634,7 +1121,7 @@ export default function CalculatorScreen() {
                   Сохраняйте данные в профиле и получайте персонализированные рекомендации
                 </Text>
               </View>
-              <ChevronRight size={20} color="#9CA3AF" />
+              <ChevronRight size={20} color={colors.mutedText} />
             </View>
           </TouchableOpacity>
         )}
@@ -672,7 +1159,7 @@ export default function CalculatorScreen() {
                 style={styles.closeButton}
                 onPress={() => setShowResults(false)}
               >
-                <X size={24} color="#6B7280" />
+                <X size={24} color={colors.secondaryText} />
               </TouchableOpacity>
             </View>
 
@@ -693,16 +1180,16 @@ export default function CalculatorScreen() {
                     'Основной обмен (BMR)',
                     `${calculationResults.bmr} ккал`,
                     'Энергия, необходимая для поддержания жизнедеятельности в состоянии покоя',
-                    <Heart size={20} color="#EF4444" />,
-                    '#EF4444'
+                    <Heart size={20} color={colors.error} />,
+                    colors.error
                   )}
 
                   {renderResultCard(
                     'Суточный расход (TDEE)',
                     `${calculationResults.tdee} ккал`,
                     `Общая дневная потребность в калориях (BMR × ${calculationResults.coefficient})`,
-                    <Zap size={20} color="#F59E0B" />,
-                    '#F59E0B'
+                    <Zap size={20} color={colors.warning} />,
+                    colors.warning
                   )}
 
                   {renderResultCard(
@@ -718,22 +1205,22 @@ export default function CalculatorScreen() {
                   <View style={styles.macrosContainer}>
                     <Text style={styles.macrosTitle}>Примерное распределение макросов:</Text>
                     <View style={styles.macrosGrid}>
-                      <View style={[styles.macroCard, { backgroundColor: '#FEF3C7' }]}>
-                        <Text style={[styles.macroLabel, { color: '#D97706' }]}>Белки</Text>
+                      <View style={[styles.macroCard, { backgroundColor: colors.warningBg }]}>
+                        <Text style={[styles.macroLabel, { color: colors.warning }]}>Белки</Text>
                         <Text style={styles.macroValue}>
                           {Math.round(calculationResults.targetCalories * 0.3 / 4)} г
                         </Text>
                         <Text style={styles.macroPercentage}>30%</Text>
                       </View>
-                      <View style={[styles.macroCard, { backgroundColor: '#DBEAFE' }]}>
-                        <Text style={[styles.macroLabel, { color: '#1D4ED8' }]}>Жиры</Text>
+                      <View style={[styles.macroCard, { backgroundColor: colors.infoBg }]}>
+                        <Text style={[styles.macroLabel, { color: colors.info }]}>Жиры</Text>
                         <Text style={styles.macroValue}>
                           {Math.round(calculationResults.targetCalories * 0.25 / 9)} г
                         </Text>
                         <Text style={styles.macroPercentage}>25%</Text>
                       </View>
-                      <View style={[styles.macroCard, { backgroundColor: '#DCFCE7' }]}>
-                        <Text style={[styles.macroLabel, { color: '#15803D' }]}>Углеводы</Text>
+                      <View style={[styles.macroCard, { backgroundColor: colors.successBg }]}>
+                        <Text style={[styles.macroLabel, { color: colors.success }]}>Углеводы</Text>
                         <Text style={styles.macroValue}>
                           {Math.round(calculationResults.targetCalories * 0.45 / 4)} г
                         </Text>
@@ -781,460 +1268,3 @@ export default function CalculatorScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    marginBottom: 24,
-  },
-  appTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  appTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  appSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  section: {
-    marginBottom: 28,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-  },
-  inputGroup: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  inputWrapper: {
-    flex: 1,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#111827',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  genderSelector: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  genderButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  genderButtonActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  genderText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  genderTextActive: {
-    color: 'white',
-  },
-  activityScroll: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
-  },
-  activityCard: {
-    width: 120,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    marginRight: 12,
-  },
-  activityCardActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#3B82F6',
-  },
-  activityCardValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  activityCardValueActive: {
-    color: '#3B82F6',
-  },
-  activityCardLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  activityCardDesc: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 16,
-  },
-  goalContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  goalCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    alignItems: 'center',
-  },
-  goalIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  goalCardLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  goalCardSubtitle: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  goalSelectedDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  saveSection: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  saveHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  saveIconContainer: {
-    flexDirection: 'row',
-    position: 'relative',
-  },
-  saveIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  saveTextContainer: {
-    flex: 1,
-  },
-  saveTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  saveDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-  saveDetails: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    gap: 12,
-  },
-  saveDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  saveDetailText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  calculateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3B82F6',
-    padding: 20,
-    borderRadius: 16,
-    gap: 12,
-    marginBottom: 24,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  calculateButtonDisabled: {
-    backgroundColor: '#9CA3AF',
-    shadowColor: '#9CA3AF',
-  },
-  calculateButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  registerPrompt: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-  },
-  registerPromptContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  registerPromptText: {
-    flex: 1,
-  },
-  registerPromptTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginBottom: 4,
-  },
-  registerPromptSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  footer: {
-    paddingBottom: 32,
-  },
-  disclaimer: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#9CA3AF',
-    lineHeight: 18,
-  },
-  // Модальное окно стили
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    width: '100%',
-    maxHeight: '80%',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  modalTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  goalSummary: {
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#F9FAFB',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 16,
-    gap: 8,
-  },
-  goalSummaryText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  goalSummaryDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  resultCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    borderLeftWidth: 4,
-  },
-  resultCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  resultIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  resultCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  resultCardValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  resultCardDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  macrosContainer: {
-    marginHorizontal: 20,
-    marginTop: 24,
-  },
-  macrosTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 16,
-  },
-  macrosGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  macroCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  macroLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  macroValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  macroPercentage: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  recommendations: {
-    marginHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 20,
-  },
-  recommendationsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  recommendationItem: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
-  },
-  recommendationBullet: {
-    fontSize: 16,
-    color: '#3B82F6',
-  },
-  recommendationText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  modalFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  actionButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

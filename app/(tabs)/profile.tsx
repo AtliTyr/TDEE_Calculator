@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { 
   View, 
   Text, 
@@ -43,12 +43,17 @@ import {
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { ThemeContext } from '@/contexts/ThemeContext';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { isAuthenticated, user, logout, updateProfile, isLoading, isSyncing } = useAuth();
-  const [darkMode, setDarkMode] = useState(false);
+  const { setColorScheme } = useContext(ThemeContext);
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
   const [isEditing, setIsEditing] = useState(false);
   const [editedHeight, setEditedHeight] = useState('');
   const [editedWeight, setEditedWeight] = useState('');
@@ -162,7 +167,7 @@ export default function ProfileScreen() {
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <View style={styles.modalIconContainer}>
-                <Flame size={24} color="#3B82F6" />
+                <Flame size={24} color={colors.accent} />
               </View>
               <Text style={styles.modalTitle}>Что такое TDEE и BMR?</Text>
             </View>
@@ -170,7 +175,7 @@ export default function ProfileScreen() {
               onPress={() => setShowTDEEModal(false)}
               style={styles.modalCloseButton}
             >
-              <X size={24} color="#6B7280" />
+              <X size={24} color={colors.secondaryText} />
             </TouchableOpacity>
           </View>
           
@@ -180,7 +185,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.modalSection}>
               <View style={styles.infoCard}>
-                <Info size={20} color="#3B82F6" />
+                <Info size={20} color={colors.accent} />
                 <Text style={styles.infoCardTitle}>BMR (Basal Metabolic Rate)</Text>
                 <Text style={styles.infoCardText}>
                   Основной обмен веществ — количество калорий, которое ваш организм сжигает в состоянии полного покоя для поддержания жизненных функций.
@@ -191,7 +196,7 @@ export default function ProfileScreen() {
             <View style={styles.modalSection}>
               <View style={styles.featureItem}>
                 <View style={styles.featureIcon}>
-                  <Activity size={18} color="#F59E0B" />
+                  <Activity size={18} color={colors.warning} />
                 </View>
                 <Text style={styles.featureTitle}>Что включает BMR?</Text>
                 <Text style={styles.featureDescription}>
@@ -205,7 +210,7 @@ export default function ProfileScreen() {
 
             <View style={styles.modalSection}>
               <View style={styles.infoCard}>
-                <Calculator size={20} color="#EF4444" />
+                <Calculator size={20} color={colors.error} />
                 <Text style={styles.infoCardTitle}>TDEE (Total Daily Energy Expenditure)</Text>
                 <Text style={styles.infoCardText}>
                   Общий суточный расход энергии — полное количество калорий, которое вы сжигаете за день с учётом физической активности.
@@ -272,8 +277,8 @@ export default function ProfileScreen() {
                 <Text style={styles.tipsTitle}>💡 Как использовать TDEE?</Text>
                 <View style={styles.tipsList}>
                   <View style={styles.tipItem}>
-                    <View style={[styles.tipIcon, { backgroundColor: '#D1FAE5' }]}>
-                      <Target size={16} color="#10B981" />
+                    <View style={[styles.tipIcon, { backgroundColor: colors.successBg }]}>
+                      <Target size={16} color={colors.success} />
                     </View>
                     <Text style={styles.tipText}>
                       <Text style={styles.tipBold}>Поддержание веса:</Text>{'\n'}
@@ -281,8 +286,8 @@ export default function ProfileScreen() {
                     </Text>
                   </View>
                   <View style={styles.tipItem}>
-                    <View style={[styles.tipIcon, { backgroundColor: '#FEE2E2' }]}>
-                      <Activity size={16} color="#EF4444" />
+                    <View style={[styles.tipIcon, { backgroundColor: colors.errorBg }]}>
+                      <Activity size={16} color={colors.error} />
                     </View>
                     <Text style={styles.tipText}>
                       <Text style={styles.tipBold}>Похудение:</Text>{'\n'}
@@ -290,8 +295,8 @@ export default function ProfileScreen() {
                     </Text>
                   </View>
                   <View style={styles.tipItem}>
-                    <View style={[styles.tipIcon, { backgroundColor: '#FEF3C7' }]}>
-                      <Star size={16} color="#F59E0B" />
+                    <View style={[styles.tipIcon, { backgroundColor: colors.warningBg }]}>
+                      <Star size={16} color={colors.warning} />
                     </View>
                     <Text style={styles.tipText}>
                       <Text style={styles.tipBold}>Набор массы:</Text>{'\n'}
@@ -330,7 +335,7 @@ export default function ProfileScreen() {
           <View style={styles.modalHeader}>
             <View style={styles.modalHeaderContent}>
               <View style={styles.modalIconContainer}>
-                <HelpCircle size={24} color="#3B82F6" />
+                <HelpCircle size={24} color={colors.accent} />
               </View>
               <Text style={styles.modalTitle}>Частые вопросы</Text>
             </View>
@@ -338,7 +343,7 @@ export default function ProfileScreen() {
               onPress={() => setShowFAQModal(false)}
               style={styles.modalCloseButton}
             >
-              <X size={24} color="#6B7280" />
+              <X size={24} color={colors.secondaryText} />
             </TouchableOpacity>
           </View>
           
@@ -392,7 +397,7 @@ export default function ProfileScreen() {
               <View style={styles.faqItem}>
                 <Text style={styles.faqQuestion}>Как сбросить пароль?</Text>
                 <Text style={styles.faqAnswer}>
-                  На странице входа нажмите "Забыли пароль". Инструкция по восстановлению придет на email.
+                  На странице входа нажмите &quot;Забыли пароль&quot;. Инструкция по восстановлению придет на email.
                 </Text>
               </View>
             </View>
@@ -449,7 +454,7 @@ export default function ProfileScreen() {
         <View style={[styles.modalContent, styles.feedbackModalContent]}>
           <View style={styles.feedbackHeader}>
             <View style={styles.feedbackIconContainer}>
-              <AlertCircle size={48} color="#3B82F6" />
+              <AlertCircle size={48} color={colors.accent} />
             </View>
             <Text style={styles.feedbackTitle}>В разработке</Text>
             <Text style={styles.feedbackText}>
@@ -460,19 +465,19 @@ export default function ProfileScreen() {
           
           <View style={styles.feedbackBody}>
             <View style={styles.featureItem}>
-              <CheckCircle size={20} color="#10B981" />
+              <CheckCircle size={20} color={colors.success} />
               <Text style={styles.featureText}>Форма обратной связи</Text>
             </View>
             <View style={styles.featureItem}>
-              <CheckCircle size={20} color="#10B981" />
+              <CheckCircle size={20} color={colors.success} />
               <Text style={styles.featureText}>Отправка скриншотов</Text>
             </View>
             <View style={styles.featureItem}>
-              <CheckCircle size={20} color="#10B981" />
+              <CheckCircle size={20} color={colors.success} />
               <Text style={styles.featureText}>История обращений</Text>
             </View>
             <View style={styles.featureItem}>
-              <CheckCircle size={20} color="#10B981" />
+              <CheckCircle size={20} color={colors.success} />
               <Text style={styles.featureText}>Статус обработки</Text>
             </View>
           </View>
@@ -497,6 +502,756 @@ export default function ProfileScreen() {
     </Modal>
   );
 
+  const colors = {
+    background: theme.background,
+    text: theme.text,
+    tint: theme.tint,
+    icon: theme.icon,
+    accent: '#3B82F6',
+    accentText: 'white',
+    secondaryText: colorScheme === 'light' ? '#6B7280' : '#9CA3AF',
+    mutedText: colorScheme === 'light' ? '#9CA3AF' : '#6B7280',
+    lightBg: colorScheme === 'light' ? '#F9FAFB' : '#1F2937',
+    veryLightBg: colorScheme === 'light' ? '#F3F4F6' : '#374151',
+    border: colorScheme === 'light' ? '#E5E7EB' : '#4B5563',
+    blueBg: colorScheme === 'light' ? '#EFF6FF' : '#1E40AF',
+    greenBg: colorScheme === 'light' ? '#F0FDF4' : '#064E3B',
+    redBg: colorScheme === 'light' ? '#FEF2F2' : '#7F1D1D',
+    yellowBg: colorScheme === 'light' ? '#FEF3C7' : '#713F12',
+    success: '#10B981',
+    error: '#EF4444',
+    warning: '#F59E0B',
+    info: '#3B82F6',
+    successBg: colorScheme === 'light' ? '#D1FAE5' : '#064E3B',
+    errorBg: colorScheme === 'light' ? '#FEE2E2' : '#7F1D1D',
+    warningBg: colorScheme === 'light' ? '#FEF3C7' : '#713F12',
+    infoBg: colorScheme === 'light' ? '#DBEAFE' : '#1E3A8A',
+  };
+
+  const styles = StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+      padding: 16,
+      backgroundColor: colors.background,
+    },
+    header: {
+      marginBottom: 24,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 8,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: colors.secondaryText,
+    },
+    profileCard: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 20,
+      padding: 20,
+      marginBottom: 24,
+    },
+    avatarContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    avatar: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 16,
+    },
+    avatarText: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.accentText,
+    },
+    userInfo: {
+      flex: 1,
+    },
+    userName: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    userEmail: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      marginBottom: 8,
+    },
+    editSection: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: 16,
+    },
+    editHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    editTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    editButtons: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    editButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: colors.veryLightBg,
+    },
+    saveButton: {
+      backgroundColor: colors.success,
+    },
+    saveButtonText: {
+      color: colors.accentText,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    cancelButton: {
+      backgroundColor: colors.veryLightBg,
+    },
+    cancelButtonText: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    editButtonText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.accent,
+    },
+    editFields: {
+      gap: 16,
+    },
+    editField: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.veryLightBg,
+      paddingBottom: 16,
+    },
+    fieldHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
+    },
+    fieldLabel: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    fieldInput: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+      backgroundColor: colors.lightBg,
+      borderRadius: 8,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    fieldValue: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    activitySelector: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    activityOption: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: colors.veryLightBg,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    activityOptionActive: {
+      backgroundColor: colors.blueBg,
+      borderColor: colors.accent,
+    },
+    activityOptionText: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    activityOptionTextActive: {
+      color: colors.accent,
+      fontWeight: '500',
+    },
+    authCard: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 20,
+      padding: 24,
+      marginBottom: 24,
+      alignItems: 'center',
+    },
+    authIconContainer: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.blueBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    authTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    authDescription: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      textAlign: 'center',
+      marginBottom: 24,
+      lineHeight: 20,
+    },
+    authButtons: {
+      width: '100%',
+      gap: 12,
+      marginBottom: 24,
+    },
+    authButtonPrimary: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.accent,
+      paddingVertical: 16,
+      borderRadius: 12,
+      gap: 12,
+    },
+    authButtonPrimaryText: {
+      color: colors.accentText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    authButtonSecondary: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      paddingVertical: 16,
+      borderRadius: 12,
+      gap: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    authButtonSecondaryText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    authFeatures: {
+      width: '100%',
+      gap: 12,
+    },
+    authFeature: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    authFeatureIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    authFeatureText: {
+      fontSize: 14,
+      color: colors.secondaryText,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    section: {
+      marginBottom: 24,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.veryLightBg,
+    },
+    menuIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: colors.lightBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    menuText: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.text,
+    },
+    themeSection: {
+      marginBottom: 24,
+    },
+    themeCard: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 16,
+      padding: 20,
+    },
+    themeHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 8,
+    },
+    themeTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    themeDescription: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      marginBottom: 16,
+    },
+    themeSwitchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    themeSwitchLabel: {
+      fontSize: 16,
+      color: colors.text,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 20,
+      borderRadius: 12,
+      gap: 12,
+      marginBottom: 24,
+    },
+    actionButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    appInfo: {
+      alignItems: 'center',
+      paddingBottom: 32,
+    },
+    appName: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    appVersion: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      marginBottom: 4,
+    },
+    appCopyright: {
+      fontSize: 12,
+      color: colors.mutedText,
+    },
+
+    // ========== СТИЛИ МОДАЛЬНЫХ ОКОН ==========
+    modalContainer: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 16,
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderRadius: 20,
+      width: '100%',
+      maxWidth: 500,
+      height: screenHeight * 0.85,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    feedbackModalContent: {
+      padding: 0,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.veryLightBg,
+    },
+    modalHeaderContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    modalIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.blueBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    modalCloseButton: {
+      padding: 4,
+    },
+    modalBody: {
+      flex: 1,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+    },
+    modalSection: {
+      marginBottom: 20,
+    },
+    modalFooter: {
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.veryLightBg,
+    },
+    modalButton: {
+      backgroundColor: colors.accent,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+    },
+    modalButtonText: {
+      color: colors.accentText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+
+    // Стили для модалки TDEE
+    infoCard: {
+      backgroundColor: colors.blueBg,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
+    },
+    infoCardTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.info,
+      marginTop: 12,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    infoCardText: {
+      fontSize: 14,
+      color: colors.text,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    // featureItem: {
+    //   backgroundColor: '#F9FAFB',
+    //   borderRadius: 12,
+    //   padding: 16,
+    // },
+    featureIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.warningBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    featureTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    featureDescription: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      lineHeight: 20,
+    },
+    formulaCard: {
+      backgroundColor: colors.greenBg,
+      borderRadius: 12,
+      padding: 16,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.success,
+    },
+    formulaTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.success,
+      marginBottom: 12,
+    },
+    formulaText: {
+      fontSize: 15,
+      color: colors.success,
+      fontFamily: 'monospace',
+      marginBottom: 12,
+    },
+    formulaSteps: {
+      marginTop: 8,
+    },
+    formulaStep: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.success,
+      marginTop: 12,
+      marginBottom: 4,
+    },
+    formulaDetail: {
+      fontSize: 13,
+      color: colors.secondaryText,
+      marginBottom: 4,
+      paddingLeft: 8,
+    },
+    coefficients: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 8,
+    },
+    coefficientItem: {
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      padding: 8,
+      borderRadius: 8,
+      minWidth: 70,
+    },
+    coefficientValue: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: colors.accent,
+    },
+    coefficientLabel: {
+      fontSize: 12,
+      color: colors.secondaryText,
+      marginTop: 2,
+    },
+    exampleCard: {
+      backgroundColor: colors.blueBg,
+      borderRadius: 12,
+      padding: 16,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.accent,
+    },
+    exampleTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.info,
+      marginBottom: 12,
+    },
+    exampleDetails: {
+      backgroundColor: 'rgba(255, 255, 255, 0.7)',
+      borderRadius: 8,
+      padding: 12,
+    },
+    exampleDetail: {
+      fontSize: 14,
+      color: colors.text,
+      marginBottom: 4,
+    },
+    exampleCalculation: {
+      marginTop: 8,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.infoBg,
+    },
+    exampleStep: {
+      fontSize: 13,
+      color: colors.info,
+      marginBottom: 4,
+      fontFamily: 'monospace',
+    },
+    tipsCard: {
+      backgroundColor: colors.warningBg,
+      borderRadius: 12,
+      padding: 16,
+    },
+    tipsTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: colors.warning,
+      marginBottom: 12,
+    },
+    tipsList: {
+      gap: 12,
+    },
+    tipItem: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+    },
+    tipIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 2,
+    },
+    tipText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.warning,
+      lineHeight: 20,
+    },
+    tipBold: {
+      fontWeight: '600',
+      color: colors.warning,
+    },
+
+    // Стили для модалки FAQ
+    faqSection: {
+      marginBottom: 24,
+    },
+    faqSectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 12,
+      paddingBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    faqItem: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+    },
+    faqQuestion: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    faqAnswer: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      lineHeight: 20,
+    },
+
+    // Стили для модалки обратной связи
+    feedbackHeader: {
+      alignItems: 'center',
+      padding: 32,
+      backgroundColor: colors.blueBg,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+    },
+    feedbackIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    feedbackTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.info,
+      marginBottom: 12,
+    },
+    feedbackText: {
+      fontSize: 16,
+      color: colors.text,
+      textAlign: 'center',
+      lineHeight: 24,
+    },
+    feedbackBody: {
+      padding: 32,
+    },
+    featureItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+      gap: 12,
+    },
+    featureText: {
+      fontSize: 16,
+      color: colors.text,
+    },
+    feedbackFooter: {
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    feedbackButton: {
+      backgroundColor: colors.accent,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    feedbackButtonText: {
+      color: colors.accentText,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    emailButton: {
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    emailButtonText: {
+      color: colors.accent,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView 
@@ -507,9 +1262,9 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.titleRow}>
             {isAuthenticated ? (
-              <User size={28} color="#3B82F6" />
+              <User size={28} color={colors.accent} />
             ) : (
-              <LogIn size={28} color="#3B82F6" />
+              <LogIn size={28} color={colors.accent} />
             )}
             <Text style={styles.title}>
               {isAuthenticated ? 'Профиль' : 'Войти'}
@@ -548,7 +1303,7 @@ export default function ProfileScreen() {
                       onPress={handleSaveProfile}
                       disabled={isSyncing}
                     >
-                      <Save size={16} color="white" />
+                      <Save size={16} color={colors.accentText} />
                       <Text style={styles.saveButtonText}>
                         {isSyncing ? 'Сохранение...' : 'Сохранить'}
                       </Text>
@@ -566,7 +1321,7 @@ export default function ProfileScreen() {
                     style={styles.editButton}
                     onPress={() => setIsEditing(true)}
                   >
-                    <Edit2 size={16} color="#3B82F6" />
+                    <Edit2 size={16} color={colors.accent} />
                     <Text style={styles.editButtonText}>Редактировать</Text>
                   </TouchableOpacity>
                 )}
@@ -577,7 +1332,7 @@ export default function ProfileScreen() {
                 {/* Рост */}
                 <View style={styles.editField}>
                   <View style={styles.fieldHeader}>
-                    <Ruler size={18} color="#6B7280" />
+                    <Ruler size={18} color={colors.secondaryText} />
                     <Text style={styles.fieldLabel}>Рост (см)</Text>
                   </View>
                   {isEditing ? (
@@ -598,7 +1353,7 @@ export default function ProfileScreen() {
                 {/* Вес */}
                 <View style={styles.editField}>
                   <View style={styles.fieldHeader}>
-                    <Scale size={18} color="#6B7280" />
+                    <Scale size={18} color={colors.secondaryText} />
                     <Text style={styles.fieldLabel}>Вес (кг)</Text>
                   </View>
                   {isEditing ? (
@@ -619,7 +1374,7 @@ export default function ProfileScreen() {
                 {/* Уровень активности */}
                 <View style={styles.editField}>
                   <View style={styles.fieldHeader}>
-                    <Activity size={18} color="#6B7280" />
+                    <Activity size={18} color={colors.secondaryText} />
                     <Text style={styles.fieldLabel}>Активность</Text>
                   </View>
                   {isEditing ? (
@@ -654,7 +1409,7 @@ export default function ProfileScreen() {
                 {/* Возраст (только чтение) */}
                 <View style={styles.editField}>
                   <View style={styles.fieldHeader}>
-                    <Calendar size={18} color="#6B7280" />
+                    <Calendar size={18} color={colors.secondaryText} />
                     <Text style={styles.fieldLabel}>Возраст</Text>
                   </View>
                   <Text style={styles.fieldValue}>{calculateAge()} лет</Text>
@@ -663,7 +1418,7 @@ export default function ProfileScreen() {
                 {/* Пол (только чтение) */}
                 <View style={styles.editField}>
                   <View style={styles.fieldHeader}>
-                    <User size={18} color="#6B7280" />
+                    <User size={18} color={colors.secondaryText} />
                     <Text style={styles.fieldLabel}>Пол</Text>
                   </View>
                   <Text style={styles.fieldValue}>
@@ -676,7 +1431,7 @@ export default function ProfileScreen() {
         ) : (
           <View style={styles.authCard}>
             <View style={styles.authIconContainer}>
-              <LogIn size={40} color="#3B82F6" />
+              <LogIn size={40} color={colors.accent} />
             </View>
             <Text style={styles.authTitle}>
               Войдите в аккаунт
@@ -690,30 +1445,30 @@ export default function ProfileScreen() {
                 style={styles.authButtonPrimary}
                 onPress={() => router.push('/auth/login')}
               >
-                <LogIn size={20} color="white" />
+                <LogIn size={20} color={colors.accentText} />
                 <Text style={styles.authButtonPrimaryText}>Войти</Text>
-                <ChevronRight size={16} color="white" />
+                <ChevronRight size={16} color={colors.accentText} />
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.authButtonSecondary}
                 onPress={() => router.push('/auth/register')}
               >
-                <UserPlus size={20} color="#3B82F6" />
+                <UserPlus size={20} color={colors.accent} />
                 <Text style={styles.authButtonSecondaryText}>Регистрация</Text>
               </TouchableOpacity>
             </View>
             
             <View style={styles.authFeatures}>
               <View style={styles.authFeature}>
-                <View style={[styles.authFeatureIcon, { backgroundColor: '#EFF6FF' }]}>
-                  <Cloud size={16} color="#3B82F6" />
+                <View style={[styles.authFeatureIcon, { backgroundColor: colors.blueBg }]}>
+                  <Cloud size={16} color={colors.accent} />
                 </View>
                 <Text style={styles.authFeatureText}>Синхронизация данных</Text>
               </View>
               <View style={styles.authFeature}>
-                <View style={[styles.authFeatureIcon, { backgroundColor: '#F0FDF4' }]}>
-                  <History size={16} color="#10B981" />
+                <View style={[styles.authFeatureIcon, { backgroundColor: colors.greenBg }]}>
+                  <History size={16} color={colors.success} />
                 </View>
                 <Text style={styles.authFeatureText}>История расчётов</Text>
               </View>
@@ -724,7 +1479,7 @@ export default function ProfileScreen() {
         {/* Помощь и поддержка */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <HelpCircle size={22} color="#3B82F6" />
+            <HelpCircle size={22} color={colors.accent} />
             <Text style={styles.sectionTitle}>Помощь и поддержка</Text>
           </View>
           
@@ -733,10 +1488,10 @@ export default function ProfileScreen() {
             onPress={() => setShowTDEEModal(true)}
           >
             <View style={styles.menuIcon}>
-              <Info size={20} color="#6B7280" />
+              <Info size={20} color={colors.secondaryText} />
             </View>
             <Text style={styles.menuText}>Как работает TDEE?</Text>
-            <ChevronRight size={20} color="#9CA3AF" />
+            <ChevronRight size={20} color={colors.mutedText} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -744,10 +1499,10 @@ export default function ProfileScreen() {
             onPress={() => setShowFAQModal(true)}
           >
             <View style={styles.menuIcon}>
-              <HelpCircle size={20} color="#6B7280" />
+              <HelpCircle size={20} color={colors.secondaryText} />
             </View>
             <Text style={styles.menuText}>Частые вопросы</Text>
-            <ChevronRight size={20} color="#9CA3AF" />
+            <ChevronRight size={20} color={colors.mutedText} />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -755,10 +1510,10 @@ export default function ProfileScreen() {
             onPress={() => setShowFeedbackModal(true)}
           >
             <View style={styles.menuIcon}>
-              <MessageSquare size={20} color="#6B7280" />
+              <MessageSquare size={20} color={colors.secondaryText} />
             </View>
             <Text style={styles.menuText}>Обратная связь</Text>
-            <ChevronRight size={20} color="#9CA3AF" />
+            <ChevronRight size={20} color={colors.mutedText} />
           </TouchableOpacity>
         </View>
 
@@ -766,29 +1521,29 @@ export default function ProfileScreen() {
         <View style={styles.themeSection}>
           <View style={styles.themeCard}>
             <View style={styles.themeHeader}>
-              {darkMode ? (
-                <Moon size={24} color="#F59E0B" />
+              {colorScheme === 'dark' ? (
+                <Moon size={24} color={colors.warning} />
               ) : (
-                <Sun size={24} color="#F59E0B" />
+                <Sun size={24} color={colors.warning} />
               )}
               <Text style={styles.themeTitle}>
-                {darkMode ? 'Тёмная тема' : 'Светлая тема'}
+                {colorScheme === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
               </Text>
             </View>
             <Text style={styles.themeDescription}>
-              {darkMode 
+              {colorScheme === 'dark' 
                 ? 'Используется тёмная цветовая схема' 
                 : 'Используется светлая цветовая схема'}
             </Text>
             <View style={styles.themeSwitchContainer}>
               <Text style={styles.themeSwitchLabel}>
-                {darkMode ? 'Включена' : 'Выключена'}
+                {colorScheme === 'dark' ? 'Включена' : 'Выключена'}
               </Text>
               <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ false: '#D1D5DB', true: '#3B82F6' }}
-                thumbColor={darkMode ? '#FFFFFF' : '#FFFFFF'}
+                value={colorScheme === 'dark'}
+                onValueChange={(value) => setColorScheme(value ? 'dark' : 'light')}
+                trackColor={{ false: colors.border, true: colors.accent }}
+                thumbColor={colorScheme === 'dark' ? colors.background : colors.background}
               />
             </View>
           </View>
@@ -799,23 +1554,23 @@ export default function ProfileScreen() {
           style={[
             styles.actionButton,
             isAuthenticated 
-              ? { backgroundColor: '#FEF2F2' }
-              : { backgroundColor: '#F3F4F6' }
+              ? { backgroundColor: colors.redBg }
+              : { backgroundColor: colors.veryLightBg }
           ]}
           onPress={isAuthenticated ? handleLogout : () => router.push('/auth/login')}
           disabled={isLoading || isSyncing}
         >
           {isAuthenticated ? (
             <>
-              <LogOut size={20} color="#EF4444" />
-              <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>
+              <LogOut size={20} color={colors.error} />
+              <Text style={[styles.actionButtonText, { color: colors.error }]}>
                 Выйти из аккаунта
               </Text>
             </>
           ) : (
             <>
-              <LogIn size={20} color="#6B7280" />
-              <Text style={[styles.actionButtonText, { color: '#6B7280' }]}>
+              <LogIn size={20} color={colors.secondaryText} />
+              <Text style={[styles.actionButtonText, { color: colors.secondaryText }]}>
                 Перейти к входу
               </Text>
             </>
@@ -837,727 +1592,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    marginBottom: 24,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  profileCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
-  },
-  avatarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  editSection: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-  },
-  editHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  editTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  editButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  saveButton: {
-    backgroundColor: '#10B981',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  cancelButton: {
-    backgroundColor: '#F3F4F6',
-  },
-  cancelButtonText: {
-    color: '#374151',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  editButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#3B82F6',
-  },
-  editFields: {
-    gap: 16,
-  },
-  editField: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    paddingBottom: 16,
-  },
-  fieldHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  fieldInput: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  fieldValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  activitySelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  activityOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  activityOptionActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#3B82F6',
-  },
-  activityOptionText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  activityOptionTextActive: {
-    color: '#3B82F6',
-    fontWeight: '500',
-  },
-  authCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-    alignItems: 'center',
-  },
-  authIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  authTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  authDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  authButtons: {
-    width: '100%',
-    gap: 12,
-    marginBottom: 24,
-  },
-  authButtonPrimary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  authButtonPrimaryText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  authButtonSecondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 12,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
-  authButtonSecondaryText: {
-    color: '#374151',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  authFeatures: {
-    width: '100%',
-    gap: 12,
-  },
-  authFeature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  authFeatureIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  authFeatureText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  menuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  menuText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#111827',
-  },
-  themeSection: {
-    marginBottom: 24,
-  },
-  themeCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 20,
-  },
-  themeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  themeTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  themeDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 16,
-  },
-  themeSwitchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  themeSwitchLabel: {
-    fontSize: 16,
-    color: '#374151',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    borderRadius: 12,
-    gap: 12,
-    marginBottom: 24,
-  },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  appInfo: {
-    alignItems: 'center',
-    paddingBottom: 32,
-  },
-  appName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  appVersion: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  appCopyright: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-
-  // ========== СТИЛИ МОДАЛЬНЫХ ОКОН ==========
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 500,
-    height: screenHeight * 0.85,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  feedbackModalContent: {
-    padding: 0,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  modalHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  modalIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  modalBody: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  modalSection: {
-    marginBottom: 20,
-  },
-  modalFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  modalButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Стили для модалки TDEE
-  infoCard: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  infoCardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E40AF',
-    marginTop: 12,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  infoCardText: {
-    fontSize: 14,
-    color: '#374151',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  // featureItem: {
-  //   backgroundColor: '#F9FAFB',
-  //   borderRadius: 12,
-  //   padding: 16,
-  // },
-  featureIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FEF3C7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  featureDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  formulaCard: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
-  },
-  formulaTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#065F46',
-    marginBottom: 12,
-  },
-  formulaText: {
-    fontSize: 15,
-    color: '#065F46',
-    fontFamily: 'monospace',
-    marginBottom: 12,
-  },
-  formulaSteps: {
-    marginTop: 8,
-  },
-  formulaStep: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#065F46',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  formulaDetail: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 4,
-    paddingLeft: 8,
-  },
-  coefficients: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  coefficientItem: {
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 8,
-    borderRadius: 8,
-    minWidth: 70,
-  },
-  coefficientValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#3B82F6',
-  },
-  coefficientLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  exampleCard: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
-  },
-  exampleTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E40AF',
-    marginBottom: 12,
-  },
-  exampleDetails: {
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: 8,
-    padding: 12,
-  },
-  exampleDetail: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 4,
-  },
-  exampleCalculation: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#DBEAFE',
-  },
-  exampleStep: {
-    fontSize: 13,
-    color: '#1E40AF',
-    marginBottom: 4,
-    fontFamily: 'monospace',
-  },
-  tipsCard: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    padding: 16,
-  },
-  tipsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#92400E',
-    marginBottom: 12,
-  },
-  tipsList: {
-    gap: 12,
-  },
-  tipItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  tipIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  tipText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#92400E',
-    lineHeight: 20,
-  },
-  tipBold: {
-    fontWeight: '600',
-    color: '#92400E',
-  },
-
-  // Стили для модалки FAQ
-  faqSection: {
-    marginBottom: 24,
-  },
-  faqSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  faqItem: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  faqQuestion: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  faqAnswer: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-
-  // Стили для модалки обратной связи
-  feedbackHeader: {
-    alignItems: 'center',
-    padding: 32,
-    backgroundColor: '#F0F9FF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  feedbackIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  feedbackTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1E40AF',
-    marginBottom: 12,
-  },
-  feedbackText: {
-    fontSize: 16,
-    color: '#374151',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  feedbackBody: {
-    padding: 32,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  featureText: {
-    fontSize: 16,
-    color: '#374151',
-  },
-  feedbackFooter: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  feedbackButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  feedbackButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emailButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-  },
-  emailButtonText: {
-    color: '#3B82F6',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
