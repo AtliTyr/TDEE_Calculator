@@ -194,8 +194,8 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.modalSection}>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIcon}>
+              <View style={styles.tdeeFeatureItem}>
+                <View style={styles.tdeeFeatureIcon}>
                   <Activity size={18} color={colors.warning} />
                 </View>
                 <Text style={styles.featureTitle}>Что включает BMR?</Text>
@@ -604,6 +604,8 @@ export default function ProfileScreen() {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      rowGap: 12,
       marginBottom: 16,
     },
     editTitle: {
@@ -613,16 +615,20 @@ export default function ProfileScreen() {
     },
     editButtons: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 8,
+      justifyContent: 'flex-end',
+      maxWidth: '100%',
     },
     editButton: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
       borderRadius: 8,
       backgroundColor: colors.veryLightBg,
+      flexShrink: 1,
     },
     saveButton: {
       backgroundColor: colors.success,
@@ -837,24 +843,35 @@ export default function ProfileScreen() {
       gap: 12,
       marginBottom: 8,
     },
+    themeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 12,
+    },
+    themeTextBlock: {
+      flex: 1,
+      marginRight: 12,
+    },
     themeTitle: {
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: '600',
       color: colors.text,
     },
     themeDescription: {
-      fontSize: 14,
+      marginTop: 4,
+      fontSize: 13,
       color: colors.secondaryText,
-      marginBottom: 16,
     },
     themeSwitchContainer: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-end',
+      marginTop: 12,
     },
-    themeSwitchLabel: {
+    themeSwitchValue: {
       fontSize: 16,
       color: colors.text,
+      fontWeight: '500',
     },
     actionButton: {
       flexDirection: 'row',
@@ -986,6 +1003,21 @@ export default function ProfileScreen() {
       color: colors.text,
       textAlign: 'center',
       lineHeight: 20,
+    },
+    tdeeFeatureItem: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 12,
+      padding: 16,
+      width: '100%',
+    },
+    tdeeFeatureIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.warningBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 12,
     },
     // featureItem: {
     //   backgroundColor: '#F9FAFB',
@@ -1519,33 +1551,23 @@ export default function ProfileScreen() {
 
         {/* Тема (вынесена вниз) */}
         <View style={styles.themeSection}>
-          <View style={styles.themeCard}>
-            <View style={styles.themeHeader}>
-              {colorScheme === 'dark' ? (
-                <Moon size={24} color={colors.warning} />
-              ) : (
-                <Sun size={24} color={colors.warning} />
-              )}
+          <View style={styles.themeRow}>
+            <View style={styles.themeTextBlock}>
               <Text style={styles.themeTitle}>
                 {colorScheme === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
               </Text>
-            </View>
-            <Text style={styles.themeDescription}>
-              {colorScheme === 'dark' 
-                ? 'Используется тёмная цветовая схема' 
-                : 'Используется светлая цветовая схема'}
-            </Text>
-            <View style={styles.themeSwitchContainer}>
-              <Text style={styles.themeSwitchLabel}>
-                {colorScheme === 'dark' ? 'Включена' : 'Выключена'}
+
+              <Text style={styles.themeDescription}>
+                Используется {colorScheme === 'dark' ? 'тёмная' : 'светлая'} цветовая схема
               </Text>
-              <Switch
-                value={colorScheme === 'dark'}
-                onValueChange={(value) => setColorScheme(value ? 'dark' : 'light')}
-                trackColor={{ false: colors.border, true: colors.accent }}
-                thumbColor={colorScheme === 'dark' ? colors.background : colors.background}
-              />
             </View>
+
+            <Switch
+              value={colorScheme === 'dark'}
+              onValueChange={(value) => setColorScheme(value ? 'dark' : 'light')}
+              trackColor={{ false: colors.border, true: colors.accent }}
+              thumbColor={colors.background}
+            />
           </View>
         </View>
 
@@ -1581,7 +1603,7 @@ export default function ProfileScreen() {
         <View style={styles.appInfo}>
           <Text style={styles.appName}>МетаБаланс</Text>
           <Text style={styles.appVersion}>Версия 1.0.0</Text>
-          <Text style={styles.appCopyright}>© 2024 Все права защищены</Text>
+          <Text style={styles.appCopyright}>© 2025 Все права защищены</Text>
         </View>
       </ScrollView>
 

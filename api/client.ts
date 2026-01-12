@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const API_URL = 'http://192.168.0.103:8000/api/v1';
+// export const API_URL = 'http://192.168.0.108:8000/api/v1';
+export const API_URL = 'https://tdeecalculatorbackend-production.up.railway.app/api/v1';
 
 /* =======================
    STORAGE KEYS
