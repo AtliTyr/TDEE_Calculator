@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -17,13 +18,14 @@ export default function RootLayout() {
     <CustomThemeProvider>
       <AuthProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <StatusBar hidden />
+
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
             <Stack.Screen name="auth/login" options={{ presentation: 'modal' }} />
             <Stack.Screen name="auth/register" options={{ presentation: 'modal' }} />
           </Stack>
-          {/* Убираем StatusBar - пусть система сама управляет */}
         </ThemeProvider>
       </AuthProvider>
     </CustomThemeProvider>

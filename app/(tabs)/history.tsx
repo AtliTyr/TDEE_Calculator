@@ -1,11 +1,9 @@
-// screens/HistoryScreen.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  FlatList, 
   ScrollView,
   SafeAreaView,
   RefreshControl,
@@ -14,8 +12,8 @@ import {
   Modal,
   TextInput,
   TouchableWithoutFeedback,
-  Keyboard,
-  Dimensions
+  FlatList,
+  ListRenderItemInfo
 } from 'react-native';
 import { 
   History, 
@@ -25,12 +23,6 @@ import {
   TrendingUp,
   Lock,
   ArrowRight,
-  LineChart,
-  Target,
-  UserPlus,
-  Calculator,
-  ArrowUpRight,
-  ArrowDownRight,
   Minus,
   ChevronRight,
   Filter,
@@ -39,18 +31,19 @@ import {
   Ruler,
   User,
   Clock,
-  Info,
   X,
   CalendarDays,
-  ChevronDown
+  ChevronDown,
+  UserPlus,
+  Calculator,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react-native';
 import { Link } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiFetch } from '@/api/client';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-
-const { height: screenHeight } = Dimensions.get('window');
 
 type Calculation = {
   id: string;
@@ -75,40 +68,22 @@ type Calculation = {
   created_at: string;
 };
 
-type HistoryStats = {
-  total: number;
-  last_7_days: number;
-  last_30_days: number;
-  average_calories?: number;
-  most_common_goal?: string;
-};
-
-// Русские названия месяцев
-const MONTHS = [
-  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-];
-
-const MONTHS_SHORT = [
-  'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
-  'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'
-];
-
-// Типы фильтров
-type FilterType = 'all' | 'week' | 'month' | 'custom';
+type FilterType = 'month' | 'quarter' | 'custom';
 
 export default function HistoryScreen() {
   const { isAuthenticated } = useAuth();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const [calculations, setCalculations] = useState<Calculation[]>([]);
-  const [stats, setStats] = useState<HistoryStats | null>(null);
+  const [displayCalculations, setDisplayCalculations] = useState<Calculation[]>([]); // Только для отображения (ограничено 10)
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterType>('all');
+  const [filter, setFilter] = useState<FilterType>('month');
   const [customDays, setCustomDays] = useState<string>('7');
   const [showCustomModal, setShowCustomModal] = useState(false);
+
+  const MAX_DISPLAY = 10; // Ограничение отображения только на клиенте
 
   const colors = {
     background: theme.background,
@@ -141,7 +116,8 @@ export default function HistoryScreen() {
     try {
       const date = new Date(dateString);
       const day = date.getDate();
-      const month = MONTHS[date.getMonth()];
+      const month = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'][date.getMonth()];
       const year = date.getFullYear();
       const hours = date.getHours().toString().padStart(2, '0');
       const minutes = date.getMinutes().toString().padStart(2, '0');
@@ -152,80 +128,52 @@ export default function HistoryScreen() {
     }
   };
 
-  // Форматирование краткой даты
-  const formatShortDate = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      const day = date.getDate();
-      const month = MONTHS_SHORT[date.getMonth()];
-      
-      return `${day} ${month}`;
-    } catch {
-      return dateString;
-    }
-  };
-
   // Получение параметров фильтрации для API
   const getFilterParams = (filterType: FilterType, customDaysValue?: string) => {
     switch (filterType) {
-      case 'week':
-        return { days: 7 };
       case 'month':
         return { days: 30 };
+      case 'quarter':
+        return { days: 90 };
       case 'custom':
         const days = parseInt(customDaysValue || customDays);
         return { days: isNaN(days) ? 7 : Math.max(1, Math.min(365, days)) };
-      case 'all':
       default:
-        return {}; // Пустой объект = все время
+        return { days: 30 };
     }
   };
 
-  // Загрузка данных
-  const loadData = async (filterType: FilterType = 'all', customDaysValue?: string) => {
+  // Загрузка данных (без лимита на сервере)
+  const loadData = async (filterType: FilterType = filter, customDaysValue?: string) => {
     if (!isAuthenticated) return;
     
     try {
       setLoading(true);
       setError(null);
       
-      // Получаем параметры фильтрации
       const params = getFilterParams(filterType, customDaysValue);
       
-      // Формируем строку запроса
       const queryParams = new URLSearchParams();
       if (params.days) {
         queryParams.append('days', params.days.toString());
       }
-      queryParams.append('limit', '50');
       
       const queryString = queryParams.toString();
       const url = queryString ? `/calculations/?${queryString}` : '/calculations/';
       
-      console.log('Загрузка данных по URL:', url);
-      
-      // Загружаем историю расчетов
       const historyResponse = await apiFetch(url);
       
-      // Загружаем статистику
-      const statsResponse = await apiFetch('/calculations/stats/summary');
+      const allCalculations = historyResponse.calculations || [];
+      setCalculations(allCalculations);
       
-      setCalculations(historyResponse.calculations || []);
-      setStats(statsResponse.stats || null);
+      // Ограничение отображения только на клиенте — последние 10
+      const displayed = allCalculations.slice(0, MAX_DISPLAY);
+      setDisplayCalculations(displayed);
       
     } catch (err: any) {
       console.error('Ошибка загрузки истории:', err);
-      console.error('Детали ошибки:', err.message, err.response?.status, err.response?.data);
       
       let errorMessage = 'Не удалось загрузить данные. Проверьте подключение к интернету.';
-      
-      if (err.response?.status === 404) {
-        errorMessage = 'API endpoint не найден. Проверьте настройки сервера.';
-      } else if (err.response?.status >= 500) {
-        errorMessage = 'Ошибка сервера. Попробуйте позже.';
-      } else if (err.message?.includes('Network Error')) {
-        errorMessage = 'Нет подключения к серверу. Проверьте интернет.';
-      }
       
       setError(errorMessage);
       Alert.alert('Ошибка', errorMessage);
@@ -276,7 +224,7 @@ export default function HistoryScreen() {
       case 1: return <TrendingDown size={16} color={colors.error} />;
       case 2: return <Minus size={16} color={colors.accent} />;
       case 3: return <TrendingUp size={16} color={colors.success} />;
-      default: return <Target size={16} color={colors.secondaryText} />;
+      default: return null;
     }
   };
 
@@ -302,10 +250,10 @@ export default function HistoryScreen() {
     return levels[code] || code;
   };
 
-  // Расчет прогресса по весу
-  const calculateWeightProgress = (): { change: number; percent: number; direction: 'up' | 'down' | 'same' } => {
+  // Расчет изменения веса (по всем calculations)
+  const calculateWeightProgress = (): { change: number; direction: 'up' | 'down' | 'same' } => {
     if (calculations.length < 2) {
-      return { change: 0, percent: 0, direction: 'same' };
+      return { change: 0, direction: 'same' };
     }
 
     const sortedCalculations = [...calculations].sort((a, b) => 
@@ -315,55 +263,140 @@ export default function HistoryScreen() {
     const firstWeight = sortedCalculations[0].input_data.weight;
     const lastWeight = sortedCalculations[sortedCalculations.length - 1].input_data.weight;
     const change = lastWeight - firstWeight;
-    const percent = firstWeight > 0 ? (change / firstWeight) * 100 : 0;
 
-    if (Math.abs(change) < 0.1) return { change, percent, direction: 'same' };
-    return { change, percent, direction: change > 0 ? 'up' : 'down' };
+    if (Math.abs(change) < 0.1) return { change: 0, direction: 'same' };
+    return { change: change.toFixed(1), direction: change > 0 ? 'up' : 'down' };
   };
 
-  // Расчет среднего TDEE
-  const calculateAverageTDEE = (): number => {
-    if (calculations.length === 0) return 0;
-    const sum = calculations.reduce((acc, calc) => acc + calc.results.tdee, 0);
-    return Math.round(sum / calculations.length);
+  // Расчет изменения TDEE за период (по всем calculations)
+  const calculateTDEEChange = (): { change: number; direction: 'up' | 'down' | 'same' } => {
+    if (calculations.length < 2) {
+      return { change: 0, direction: 'same' };
+    }
+
+    const sortedCalculations = [...calculations].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
+    const firstTDEE = sortedCalculations[0].results.tdee;
+    const lastTDEE = sortedCalculations[sortedCalculations.length - 1].results.tdee;
+    const change = Math.round(lastTDEE - firstTDEE);
+
+    if (Math.abs(change) < 5) return { change: 0, direction: 'same' };
+    return { change, direction: change > 0 ? 'up' : 'down' };
   };
 
-  // Получение описания текущего фильтра
+  // Описание текущего фильтра
   const getFilterDescription = (): string => {
     switch (filter) {
-      case 'week':
-        return 'За последние 7 дней';
       case 'month':
         return 'За последние 30 дней';
+      case 'quarter':
+        return 'За последние 90 дней';
       case 'custom':
         const days = parseInt(customDays);
-        return `За последние ${days} ${getDaysWord(days)}`;
-      case 'all':
+        return `За последние ${days} дней`;
       default:
-        return 'За все время';
+        return 'За последние 30 дней';
     }
   };
 
-  // Склонение слова "день"
-  const getDaysWord = (days: number): string => {
-    const lastDigit = days % 10;
-    const lastTwoDigits = days % 100;
-    
-    if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
-      return 'дней';
-    }
-    
-    switch (lastDigit) {
-      case 1:
-        return 'день';
-      case 2:
-      case 3:
-      case 4:
-        return 'дня';
-      default:
-        return 'дней';
-    }
-  };
+  // Рендер элемента списка
+  const renderCalculationItem = ({ item }: ListRenderItemInfo<Calculation>) => (
+    <TouchableOpacity 
+      style={styles.calculationCard}
+      activeOpacity={0.7}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.cardDate}>
+          <Clock size={14} color={colors.secondaryText} />
+          <Text style={styles.cardDateText}>
+            {formatDate(item.created_at)}
+          </Text>
+        </View>
+        <View style={[
+          styles.goalBadge,
+          { backgroundColor: `${getGoalColor(item.goal_id)}15` }
+        ]}>
+          {getGoalIcon(item.goal_id)}
+          <Text style={[
+            styles.goalBadgeText,
+            { color: getGoalColor(item.goal_id) }
+          ]}>
+            {getGoalName(item.goal_id)}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.cardContent}>
+        <View style={styles.metricsRow}>
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>BMR</Text>
+            <Text style={styles.metricValue}>
+              {item.results.bmr.toLocaleString()} ккал
+            </Text>
+          </View>
+          <View style={styles.metricDivider} />
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>TDEE</Text>
+            <Text style={styles.metricValue}>
+              {item.results.tdee.toLocaleString()} ккал
+            </Text>
+          </View>
+          <View style={styles.metricDivider} />
+          <View style={styles.metricItem}>
+            <Text style={styles.metricLabel}>Цель</Text>
+            <Text style={styles.metricValue}>
+              {item.results.calorie_target.toLocaleString()} ккал
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.inputData}>
+          <View style={styles.inputRow}>
+            <View style={styles.inputItem}>
+              <Scale size={14} color={colors.secondaryText} />
+              <Text style={styles.inputText}>
+                {item.input_data.weight} кг
+              </Text>
+            </View>
+            <View style={styles.inputItem}>
+              <Ruler size={14} color={colors.secondaryText} />
+              <Text style={styles.inputText}>
+                {item.input_data.height} см
+              </Text>
+            </View>
+            <View style={styles.inputItem}>
+              <User size={14} color={colors.secondaryText} />
+              <Text style={styles.inputText}>
+                {item.input_data.age} лет
+              </Text>
+            </View>
+          </View>
+          <View style={styles.inputRow}>
+            <View style={styles.inputItem}>
+              <ActivityIcon size={14} color={colors.secondaryText} />
+              <Text style={styles.inputText}>
+                {getActivityLevelName(item.input_data.activity_level)}
+              </Text>
+            </View>
+            <View style={styles.inputItem}>
+              <Text style={styles.inputText}>
+                {item.input_data.gender === 'male' ? 'Мужчина' : 'Женщина'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+      
+      <View style={styles.cardFooter}>
+        <Text style={styles.cardInfo}>
+          Коэффициент активности: {item.results.coefficient}
+        </Text>
+        <ChevronRight size={16} color={colors.mutedText} />
+      </View>
+    </TouchableOpacity>
+  );
 
   const styles = StyleSheet.create({
     safeArea: {
@@ -476,13 +509,23 @@ export default function HistoryScreen() {
       fontWeight: '600',
     },
     filtersContainer: {
+      backgroundColor: colors.lightBg,
+      borderRadius: 16,
+      padding: 16,
       marginBottom: 24,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    filtersHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
     },
     filtersTitle: {
-      fontSize: 14,
-      fontWeight: '500',
+      fontSize: 16,
+      fontWeight: '600',
       color: colors.text,
-      marginBottom: 12,
     },
     filters: {
       flexDirection: 'row',
@@ -490,14 +533,19 @@ export default function HistoryScreen() {
       flexWrap: 'wrap',
     },
     filterButton: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: 12,
-      backgroundColor: colors.veryLightBg,
-      minWidth: 80,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      backgroundColor: 'transparent',
+      minWidth: 90,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     filterButtonActive: {
       backgroundColor: colors.accent,
+      borderColor: colors.accent,
     },
     filterText: {
       fontSize: 14,
@@ -553,17 +601,6 @@ export default function HistoryScreen() {
       fontSize: 14,
       fontWeight: '600',
     },
-    detailsButton: {
-      backgroundColor: colors.veryLightBg,
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 8,
-    },
-    detailsButtonText: {
-      color: colors.text,
-      fontSize: 14,
-      fontWeight: '600',
-    },
     emptyContainer: {
       alignItems: 'center',
       padding: 48,
@@ -592,17 +629,6 @@ export default function HistoryScreen() {
       fontStyle: 'italic',
       marginBottom: 20,
     },
-    changeFilterButton: {
-      backgroundColor: colors.accent,
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      borderRadius: 12,
-    },
-    changeFilterButtonText: {
-      color: colors.accentText,
-      fontSize: 14,
-      fontWeight: '600',
-    },
     statsContainer: {
       flexDirection: 'row',
       gap: 12,
@@ -613,40 +639,47 @@ export default function HistoryScreen() {
       backgroundColor: colors.lightBg,
       borderRadius: 16,
       padding: 16,
+      justifyContent: 'space-between',
     },
     statHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
       marginBottom: 12,
+      alignSelf: 'flex-start',
     },
     statTitle: {
-      fontSize: 12,
-      fontWeight: '500',
-      color: colors.secondaryText,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    statMainContent: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     statValue: {
-      fontSize: 24,
+      fontSize: 36,
       fontWeight: 'bold',
       color: colors.text,
-      marginBottom: 2,
-    },
-    statValueUp: {
-      color: colors.error,
-    },
-    statValueDown: {
-      color: colors.success,
     },
     statRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 12,
     },
     statUnit: {
-      fontSize: 12,
+      fontSize: 16,
       color: colors.secondaryText,
+      marginTop: 8,
+    },
+    statNoData: {
+      fontSize: 18,
+      color: colors.mutedText,
+      fontStyle: 'italic',
     },
     calculationsList: {
+      flex: 1,
       marginBottom: 24,
     },
     listHeader: {
@@ -778,7 +811,6 @@ export default function HistoryScreen() {
       fontSize: 12,
       color: colors.secondaryText,
     },
-    // Модальное окно стили
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -896,7 +928,6 @@ export default function HistoryScreen() {
     },
   });
 
-  // Экраны для неавторизованных пользователей
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -950,7 +981,6 @@ export default function HistoryScreen() {
     );
   }
 
-  // Экраны для авторизованных пользователей
   return (
     <>
       <SafeAreaView style={styles.safeArea}>
@@ -967,36 +997,20 @@ export default function HistoryScreen() {
               <View style={styles.headerTitle}>
                 <Text style={styles.title}>История расчетов</Text>
                 <Text style={styles.subtitle}>
-                  {calculations.length > 0 
-                    ? `${calculations.length} расчетов • ${getFilterDescription()}` 
+                  {displayCalculations.length > 0 
+                    ? `${displayCalculations.length} расчетов • ${getFilterDescription()}` 
                     : 'Здесь появятся ваши расчеты'}
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Фильтры */}
           <View style={styles.filtersContainer}>
-            <Text style={styles.filtersTitle}>Период:</Text>
+            <View style={styles.filtersHeader}>
+              <Filter size={20} color={colors.accent} />
+              <Text style={styles.filtersTitle}>Период просмотра</Text>
+            </View>
             <View style={styles.filters}>
-              <TouchableOpacity
-                style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
-                onPress={() => setFilter('all')}
-              >
-                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
-                  Все время
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.filterButton, filter === 'week' && styles.filterButtonActive]}
-                onPress={() => setFilter('week')}
-              >
-                <Text style={[styles.filterText, filter === 'week' && styles.filterTextActive]}>
-                  7 дней
-                </Text>
-              </TouchableOpacity>
-              
               <TouchableOpacity
                 style={[styles.filterButton, filter === 'month' && styles.filterButtonActive]}
                 onPress={() => setFilter('month')}
@@ -1007,15 +1021,23 @@ export default function HistoryScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity
+                style={[styles.filterButton, filter === 'quarter' && styles.filterButtonActive]}
+                onPress={() => setFilter('quarter')}
+              >
+                <Text style={[styles.filterText, filter === 'quarter' && styles.filterTextActive]}>
+                  90 дней
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
                 style={[styles.filterButton, filter === 'custom' && styles.filterButtonActive]}
                 onPress={() => setShowCustomModal(true)}
               >
                 <View style={styles.customFilterContent}>
                   <Filter size={14} color={filter === 'custom' ? colors.accentText : colors.secondaryText} />
                   <Text style={[styles.filterText, filter === 'custom' && styles.filterTextActive]}>
-                    {filter === 'custom' ? `${customDays} д.` : 'Свой'}
+                    Свой
                   </Text>
-                  <ChevronDown size={12} color={filter === 'custom' ? colors.accentText : colors.secondaryText} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -1033,195 +1055,98 @@ export default function HistoryScreen() {
                 <TouchableOpacity style={styles.retryButton} onPress={() => loadData(filter)}>
                   <Text style={styles.retryButtonText}>Повторить</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.detailsButton} 
-                  onPress={() => Alert.alert('Детали ошибки', error)}
-                >
-                  <Text style={styles.detailsButtonText}>Подробнее</Text>
-                </TouchableOpacity>
               </View>
             </View>
-          ) : calculations.length === 0 ? (
+          ) : displayCalculations.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Calculator size={64} color={colors.mutedText} />
               <Text style={styles.emptyTitle}>
-                {filter === 'all' ? 'История расчетов пуста' : 'Нет расчетов за выбранный период'}
+                Нет расчетов за выбранный период
               </Text>
               <Text style={styles.emptyDescription}>
-                {filter === 'all' 
-                  ? 'Выполните расчет TDEE на главной странице, и он появится здесь'
-                  : `Попробуйте выбрать другой период или выполните новый расчет`}
+                Попробуйте выбрать другой период или выполните новый расчет
               </Text>
               <Text style={styles.emptyHint}>
                 Не забудьте включить опцию «Сохранять историю расчетов» в калькуляторе
               </Text>
-              {(filter !== 'all') && (
-                <TouchableOpacity 
-                  style={styles.changeFilterButton}
-                  onPress={() => setFilter('all')}
-                >
-                  <Text style={styles.changeFilterButtonText}>Показать все расчеты</Text>
-                </TouchableOpacity>
-              )}
             </View>
           ) : (
             <>
-              {/* Статистика */}
               <View style={styles.statsContainer}>
                 <View style={styles.statCard}>
                   <View style={styles.statHeader}>
                     <Flame size={20} color={colors.warning} />
-                    <Text style={styles.statTitle}>Средний TDEE</Text>
+                    <Text style={styles.statTitle}>Изменение TDEE{"\n"}за период</Text>
                   </View>
-                  <Text style={styles.statValue}>{calculateAverageTDEE()}</Text>
-                  <Text style={styles.statUnit}>ккал</Text>
+
+                  <View style={styles.statMainContent}>
+                    {(() => {
+                      const { change, direction } = calculateTDEEChange();
+                      if (direction === 'same') {
+                        return <Text style={styles.statNoData}>Нет изменений</Text>;
+                      }
+                      return (
+                        <>
+                          <View style={styles.statRow}>
+                            <Text style={styles.statValue}>
+                              {change > 0 ? '+' : ''}{change}
+                            </Text>
+                            {direction === 'up' ? <ArrowUpRight size={28} color={colors.secondaryText} /> :
+                             direction === 'down' ? <ArrowDownRight size={28} color={colors.secondaryText} /> : null}
+                          </View>
+                          <Text style={styles.statUnit}>ккал</Text>
+                        </>
+                      );
+                    })()}
+                  </View>
                 </View>
                 
                 <View style={styles.statCard}>
                   <View style={styles.statHeader}>
                     <Scale size={20} color={colors.success} />
-                    <Text style={styles.statTitle}>Изменение веса</Text>
+                    <Text style={styles.statTitle}>Изменение веса{"\n"}за период</Text>
                   </View>
-                  {(() => {
-                    const progress = calculateWeightProgress();
-                    return (
-                      <>
-                        <View style={styles.statRow}>
-                          <Text style={[
-                            styles.statValue,
-                            progress.direction === 'up' && styles.statValueUp,
-                            progress.direction === 'down' && styles.statValueDown
-                          ]}>
-                            {progress.change > 0 ? '+' : ''}{progress.change.toFixed(1)}
-                          </Text>
-                          {progress.direction === 'up' && <ArrowUpRight size={16} color={colors.error} />}
-                          {progress.direction === 'down' && <ArrowDownRight size={16} color={colors.success} />}
-                          {progress.direction === 'same' && <Minus size={16} color={colors.secondaryText} />}
-                        </View>
-                        <Text style={styles.statUnit}>кг</Text>
-                      </>
-                    );
-                  })()}
-                </View>
-                
-                <View style={styles.statCard}>
-                  <View style={styles.statHeader}>
-                    <Target size={20} color={colors.accent} />
-                    <Text style={styles.statTitle}>Расчетов</Text>
+
+                  <View style={styles.statMainContent}>
+                    {(() => {
+                      const progress = calculateWeightProgress();
+                      if (progress.direction === 'same') {
+                        return <Text style={styles.statNoData}>Нет изменений</Text>;
+                      }
+                      return (
+                        <>
+                          <View style={styles.statRow}>
+                            <Text style={styles.statValue}>
+                              {progress.change > 0 ? '+' : ''}{progress.change}
+                            </Text>
+                            {progress.direction === 'up' ? <ArrowUpRight size={28} color={colors.secondaryText} /> :
+                             progress.direction === 'down' ? <ArrowDownRight size={28} color={colors.secondaryText} /> : null}
+                          </View>
+                          <Text style={styles.statUnit}>кг</Text>
+                        </>
+                      );
+                    })()}
                   </View>
-                  <Text style={styles.statValue}>{calculations.length}</Text>
-                  <Text style={styles.statUnit}>шт</Text>
                 </View>
               </View>
 
-              {/* Список расчетов */}
               <View style={styles.calculationsList}>
                 <View style={styles.listHeader}>
                   <Text style={styles.listTitle}>Последние расчеты</Text>
-                  <Text style={styles.listCount}>{calculations.length} записей</Text>
+                  <Text style={styles.listCount}>
+                    Показано {displayCalculations.length} {calculations.length > MAX_DISPLAY ? `(из ${calculations.length})` : ''}
+                  </Text>
                 </View>
-                
-                {calculations.map((calculation) => (
-                  <TouchableOpacity 
-                    key={calculation.id} 
-                    style={styles.calculationCard}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.cardHeader}>
-                      <View style={styles.cardDate}>
-                        <Clock size={14} color={colors.secondaryText} />
-                        <Text style={styles.cardDateText}>
-                          {formatDate(calculation.created_at)}
-                        </Text>
-                      </View>
-                      <View style={[
-                        styles.goalBadge,
-                        { backgroundColor: `${getGoalColor(calculation.goal_id)}15` }
-                      ]}>
-                        {getGoalIcon(calculation.goal_id)}
-                        <Text style={[
-                          styles.goalBadgeText,
-                          { color: getGoalColor(calculation.goal_id) }
-                        ]}>
-                          {getGoalName(calculation.goal_id)}
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.cardContent}>
-                      {/* Основные метрики */}
-                      <View style={styles.metricsRow}>
-                        <View style={styles.metricItem}>
-                          <Text style={styles.metricLabel}>BMR</Text>
-                          <Text style={styles.metricValue}>
-                            {calculation.results.bmr.toLocaleString()} ккал
-                          </Text>
-                        </View>
-                        <View style={styles.metricDivider} />
-                        <View style={styles.metricItem}>
-                          <Text style={styles.metricLabel}>TDEE</Text>
-                          <Text style={styles.metricValue}>
-                            {calculation.results.tdee.toLocaleString()} ккал
-                          </Text>
-                        </View>
-                        <View style={styles.metricDivider} />
-                        <View style={styles.metricItem}>
-                          <Text style={styles.metricLabel}>Цель</Text>
-                          <Text style={styles.metricValue}>
-                            {calculation.results.calorie_target.toLocaleString()} ккал
-                          </Text>
-                        </View>
-                      </View>
-                      
-                      {/* Входные данные */}
-                      <View style={styles.inputData}>
-                        <View style={styles.inputRow}>
-                          <View style={styles.inputItem}>
-                            <Scale size={14} color={colors.secondaryText} />
-                            <Text style={styles.inputText}>
-                              {calculation.input_data.weight} кг
-                            </Text>
-                          </View>
-                          <View style={styles.inputItem}>
-                            <Ruler size={14} color={colors.secondaryText} />
-                            <Text style={styles.inputText}>
-                              {calculation.input_data.height} см
-                            </Text>
-                          </View>
-                          <View style={styles.inputItem}>
-                            <User size={14} color={colors.secondaryText} />
-                            <Text style={styles.inputText}>
-                              {calculation.input_data.age} лет
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={styles.inputRow}>
-                          <View style={styles.inputItem}>
-                            <ActivityIcon size={14} color={colors.secondaryText} />
-                            <Text style={styles.inputText}>
-                              {getActivityLevelName(calculation.input_data.activity_level)}
-                            </Text>
-                          </View>
-                          <View style={styles.inputItem}>
-                            <Text style={styles.inputText}>
-                              {calculation.input_data.gender === 'male' ? 'Мужчина' : 'Женщина'}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.cardFooter}>
-                      <Text style={styles.cardInfo}>
-                        Коэффициент активности: {calculation.results.coefficient}
-                      </Text>
-                      <ChevronRight size={16} color={colors.mutedText} />
-                    </View>
-                  </TouchableOpacity>
-                ))}
+
+                <FlatList
+                  data={displayCalculations}
+                  renderItem={renderCalculationItem}
+                  keyExtractor={(item) => item.id}
+                  showsVerticalScrollIndicator={false}
+                  scrollEnabled={false}
+                />
               </View>
 
-              {/* Информация о синхронизации */}
               <View style={styles.syncInfo}>
                 <Text style={styles.syncInfoText}>
                   💾 Данные автоматически сохраняются при каждом расчете
@@ -1235,7 +1160,6 @@ export default function HistoryScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Модальное окно для кастомного фильтра */}
       <Modal
         visible={showCustomModal}
         transparent={true}

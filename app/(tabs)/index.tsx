@@ -325,10 +325,9 @@ export default function CalculatorScreen() {
       }
 
       // Сохраняем расчет в бэкенд если нужно
-      let calculationSaved = false;
       if (isAuthenticated && saveSettings.saveToHistory) {
         try {
-          calculationSaved = await createCalculation(
+          await createCalculation(
             bmr,
             tdee,
             targetCalories,
@@ -376,14 +375,6 @@ export default function CalculatorScreen() {
     }
   };
 
-  const getGoalIcon = () => {
-    switch (goal) {
-      case 'loss': return <TrendingDown size={24} color={colors.success} />;
-      case 'gain': return <TrendingUp size={24} color={colors.warning} />;
-      default: return <Minus size={24} color={colors.accent} />;
-    }
-  };
-
   const getGoalColor = () => {
     switch (goal) {
       case 'loss': return colors.success;
@@ -394,28 +385,48 @@ export default function CalculatorScreen() {
 
   const getGoalDescription = () => {
     switch (goal) {
-      case 'loss': return 'Для похудения рекомендуется умеренный дефицит калорий';
-      case 'gain': return 'Для набора массы рекомендуется небольшой профицит калорий';
-      default: return 'Для поддержания веса придерживайтесь полученной нормы';
+      case 'loss': return 'Дефицит для безопасного похудения (~0.5–1 кг в неделю)';
+      case 'gain': return 'Профицит для набора мышечной массы';
+      default: return 'Поддержание текущего веса';
     }
   };
 
-  const renderResultCard = (
+  const renderMainResultCard = () => (
+    <View style={[styles.mainResultCard, { borderLeftColor: getGoalColor() }]}>
+      <View style={styles.resultCardHeader}>
+        <View style={[styles.resultIconContainer, { backgroundColor: getGoalColor() + '20' }]}>
+          <TargetIcon size={32} color={getGoalColor()} />
+        </View>
+        <Text style={styles.resultCardTitle}>Ваша норма калорий</Text>
+      </View>
+      <Text style={styles.mainResultValue}>
+        {calculationResults?.targetCalories.toLocaleString()} ккал/день
+      </Text>
+      <Text style={styles.resultCardDescription}>
+        {getGoalDescription()}
+      </Text>
+      <Text style={styles.secondaryDescription}>
+        На основе TDEE {calculationResults?.tdee.toLocaleString()} ккал с корректировкой для цели
+      </Text>
+    </View>
+  );
+
+  const renderSecondaryResultCard = (
     title: string,
     value: string,
     description: string,
     icon: React.ReactNode,
     color: string
   ) => (
-    <View style={[styles.resultCard, { borderLeftColor: color }]}>
+    <View style={[styles.secondaryResultCard, { borderLeftColor: color }]}>
       <View style={styles.resultCardHeader}>
         <View style={[styles.resultIconContainer, { backgroundColor: color + '20' }]}>
           {icon}
         </View>
-        <Text style={styles.resultCardTitle}>{title}</Text>
+        <Text style={styles.secondaryCardTitle}>{title}</Text>
       </View>
-      <Text style={styles.resultCardValue}>{value}</Text>
-      <Text style={styles.resultCardDescription}>{description}</Text>
+      <Text style={styles.secondaryCardValue}>{value}</Text>
+      <Text style={styles.secondaryCardDescription}>{description}</Text>
     </View>
   );
 
@@ -740,26 +751,34 @@ export default function CalculatorScreen() {
     closeButton: {
       padding: 4,
     },
-    goalSummary: {
-      alignItems: 'center',
-      padding: 20,
-      backgroundColor: colors.lightBg,
+    mainResultCard: {
+      backgroundColor: colors.background,
+      borderRadius: 20,
+      padding: 24,
       marginHorizontal: 20,
       marginTop: 20,
-      borderRadius: 16,
-      gap: 8,
+      borderWidth: 1,
+      borderColor: colors.veryLightBg,
+      borderLeftWidth: 6,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
     },
-    goalSummaryText: {
-      fontSize: 18,
+    mainResultValue: {
+      fontSize: 40,
       fontWeight: 'bold',
+      color: colors.text,
+      marginVertical: 12,
     },
-    goalSummaryDescription: {
+    secondaryDescription: {
       fontSize: 14,
       color: colors.secondaryText,
-      textAlign: 'center',
-      lineHeight: 20,
+      marginTop: 8,
+      fontStyle: 'italic',
     },
-    resultCard: {
+    secondaryResultCard: {
       backgroundColor: colors.background,
       borderRadius: 16,
       padding: 20,
@@ -787,51 +806,26 @@ export default function CalculatorScreen() {
       fontWeight: '600',
       color: colors.text,
     },
-    resultCardValue: {
-      fontSize: 32,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: 8,
-    },
     resultCardDescription: {
       fontSize: 14,
       color: colors.secondaryText,
       lineHeight: 20,
     },
-    macrosContainer: {
-      marginHorizontal: 20,
-      marginTop: 24,
-    },
-    macrosTitle: {
-      fontSize: 16,
+    secondaryCardTitle: {
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
-      marginBottom: 16,
     },
-    macrosGrid: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    macroCard: {
-      flex: 1,
-      padding: 16,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    macroLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      marginBottom: 8,
-    },
-    macroValue: {
-      fontSize: 18,
+    secondaryCardValue: {
+      fontSize: 28,
       fontWeight: 'bold',
       color: colors.text,
-      marginBottom: 4,
+      marginVertical: 8,
     },
-    macroPercentage: {
-      fontSize: 14,
+    secondaryCardDescription: {
+      fontSize: 13,
       color: colors.secondaryText,
+      lineHeight: 18,
     },
     recommendations: {
       marginHorizontal: 20,
@@ -1153,7 +1147,7 @@ export default function CalculatorScreen() {
             <View style={styles.modalHeader}>
               <View style={styles.modalTitleContainer}>
                 <TargetIcon size={24} color={getGoalColor()} />
-                <Text style={styles.modalTitle}>🎯 Результаты расчета</Text>
+                <Text style={styles.modalTitle}>🎯 Ваша норма калорий</Text>
               </View>
               <TouchableOpacity 
                 style={styles.closeButton}
@@ -1164,104 +1158,60 @@ export default function CalculatorScreen() {
             </View>
 
             {calculationResults && (
-              <>
-                <View style={styles.goalSummary}>
-                  {getGoalIcon()}
-                  <Text style={[styles.goalSummaryText, { color: getGoalColor() }]}>
-                    {goal === 'loss' ? 'Похудение' : goal === 'gain' ? 'Набор массы' : 'Поддержание веса'}
-                  </Text>
-                  <Text style={styles.goalSummaryDescription}>
-                    {getGoalDescription()}
-                  </Text>
-                </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Главная карточка — целевые калории */}
+                {renderMainResultCard()}
 
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  {renderResultCard(
-                    'Основной обмен (BMR)',
-                    `${calculationResults.bmr} ккал`,
-                    'Энергия, необходимая для поддержания жизнедеятельности в состоянии покоя',
-                    <Heart size={20} color={colors.error} />,
-                    colors.error
-                  )}
+                {/* Суточный расход (TDEE) */}
+                {renderSecondaryResultCard(
+                  'Суточный расход (TDEE)',
+                  `${calculationResults.tdee.toLocaleString()} ккал`,
+                  `Общая дневная потребность в калориях с учётом активности (BMR × ${calculationResults.coefficient})`,
+                  <Zap size={20} color={colors.warning} />,
+                  colors.warning
+                )}
 
-                  {renderResultCard(
-                    'Суточный расход (TDEE)',
-                    `${calculationResults.tdee} ккал`,
-                    `Общая дневная потребность в калориях (BMR × ${calculationResults.coefficient})`,
-                    <Zap size={20} color={colors.warning} />,
-                    colors.warning
-                  )}
+                {/* Основной обмен (BMR) */}
+                {renderSecondaryResultCard(
+                  'Основной обмен (BMR)',
+                  `${calculationResults.bmr.toLocaleString()} ккал`,
+                  'Энергия, необходимая для поддержания жизнедеятельности в состоянии покоя',
+                  <Heart size={20} color={colors.error} />,
+                  colors.error
+                )}
 
-                  {renderResultCard(
-                    'Целевые калории',
-                    `${calculationResults.targetCalories} ккал/день`,
-                    goal === 'loss' ? 'Дефицит для плавного похудения' : 
-                    goal === 'gain' ? 'Профицит для набора массы' : 
-                    'Для поддержания текущего веса',
-                    <TargetIcon size={20} color={getGoalColor()} />,
-                    getGoalColor()
-                  )}
-
-                  <View style={styles.macrosContainer}>
-                    <Text style={styles.macrosTitle}>Примерное распределение макросов:</Text>
-                    <View style={styles.macrosGrid}>
-                      <View style={[styles.macroCard, { backgroundColor: colors.warningBg }]}>
-                        <Text style={[styles.macroLabel, { color: colors.warning }]}>Белки</Text>
-                        <Text style={styles.macroValue}>
-                          {Math.round(calculationResults.targetCalories * 0.3 / 4)} г
-                        </Text>
-                        <Text style={styles.macroPercentage}>30%</Text>
-                      </View>
-                      <View style={[styles.macroCard, { backgroundColor: colors.infoBg }]}>
-                        <Text style={[styles.macroLabel, { color: colors.info }]}>Жиры</Text>
-                        <Text style={styles.macroValue}>
-                          {Math.round(calculationResults.targetCalories * 0.25 / 9)} г
-                        </Text>
-                        <Text style={styles.macroPercentage}>25%</Text>
-                      </View>
-                      <View style={[styles.macroCard, { backgroundColor: colors.successBg }]}>
-                        <Text style={[styles.macroLabel, { color: colors.success }]}>Углеводы</Text>
-                        <Text style={styles.macroValue}>
-                          {Math.round(calculationResults.targetCalories * 0.45 / 4)} г
-                        </Text>
-                        <Text style={styles.macroPercentage}>45%</Text>
-                      </View>
-                    </View>
+                <View style={styles.recommendations}>
+                  <Text style={styles.recommendationsTitle}>💡 Рекомендации:</Text>
+                  <View style={styles.recommendationItem}>
+                    <Text style={styles.recommendationBullet}>•</Text>
+                    <Text style={styles.recommendationText}>
+                      Придерживайтесь целевых калорий ежедневно для достижения цели
+                    </Text>
                   </View>
-
-                  <View style={styles.recommendations}>
-                    <Text style={styles.recommendationsTitle}>💡 Рекомендации:</Text>
-                    <View style={styles.recommendationItem}>
-                      <Text style={styles.recommendationBullet}>•</Text>
-                      <Text style={styles.recommendationText}>
-                        Придерживайтесь целевых калорий ежедневно для достижения цели
-                      </Text>
-                    </View>
-                    <View style={styles.recommendationItem}>
-                      <Text style={styles.recommendationBullet}>•</Text>
-                      <Text style={styles.recommendationText}>
-                        Взвешивайтесь раз в неделю в одно и то же время
-                      </Text>
-                    </View>
-                    <View style={styles.recommendationItem}>
-                      <Text style={styles.recommendationBullet}>•</Text>
-                      <Text style={styles.recommendationText}>
-                        При отсутствии прогресса скорректируйте калории на ±100-200 ккал
-                      </Text>
-                    </View>
+                  <View style={styles.recommendationItem}>
+                    <Text style={styles.recommendationBullet}>•</Text>
+                    <Text style={styles.recommendationText}>
+                      Взвешивайтесь раз в неделю в одно и то же время
+                    </Text>
                   </View>
-                </ScrollView>
-
-                <View style={styles.modalFooter}>
-                  <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: getGoalColor() }]}
-                    onPress={() => setShowResults(false)}
-                  >
-                    <Text style={styles.actionButtonText}>Отлично! Понятно</Text>
-                  </TouchableOpacity>
+                  <View style={styles.recommendationItem}>
+                    <Text style={styles.recommendationBullet}>•</Text>
+                    <Text style={styles.recommendationText}>
+                      При отсутствии прогресса скорректируйте калории на ±100-200 ккал
+                    </Text>
+                  </View>
                 </View>
-              </>
+              </ScrollView>
             )}
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: getGoalColor() }]}
+                onPress={() => setShowResults(false)}
+              >
+                <Text style={styles.actionButtonText}>Понятно, спасибо!</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </View>
       </Modal>
